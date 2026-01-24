@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Create custom frames for your NFTs with QR codes">
+    <title>NFT Frame Studio</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖼️ NFT Frame Studio</h1>
+            <p class="subtitle">Transform your NFTs into beautiful framed prints</p>
+        </header>
+
+        <main>
+            <!-- Step 1: NFT Input -->
+            <section class="card" id="nft-input-section">
+                <h2>1. Enter NFT Details</h2>
+                <div class="form-group">
+                    <label for="network">Network</label>
+                    <select id="network" class="input-field">
+                        <option value="ethereum">Ethereum (ERC-721)</option>
+                        <option value="polygon">Polygon (Coming Soon)</option>
+                        <option value="base">Base (Coming Soon)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contract">Contract Address</label>
+                    <input 
+                        type="text" 
+                        id="contract" 
+                        class="input-field" 
+                        placeholder="0x..."
+                        pattern="0x[a-fA-F0-9]{40}"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="tokenId">Token ID</label>
+                    <input 
+                        type="text" 
+                        id="tokenId" 
+                        class="input-field" 
+                        placeholder="1"
+                    >
+                </div>
+
+                <button id="loadNftBtn" class="btn btn-primary">Load NFT</button>
+                <div id="loading" class="loading hidden">Loading NFT...</div>
+                <div id="error" class="error hidden"></div>
+            </section>
+
+            <!-- Step 2: NFT Preview -->
+            <section class="card hidden" id="nft-preview-section">
+                <h2>2. Your NFT</h2>
+                <div id="nftInfo" class="nft-info">
+                    <img id="nftImage" alt="NFT" class="nft-image">
+                    <div class="nft-details">
+                        <h3 id="nftName"></h3>
+                        <p id="nftDescription"></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 3.5: AI Assistant -->
+            <section class="card hidden" id="ai-assistant-section">
+                <h2>🤖 AI Frame Assistant</h2>
+                <p class="subtitle" style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    Describe what you want, and I'll adjust your frame settings!
+                </p>
+                
+                <div class="ai-config">
+                    <button class="btn-small" id="configureApiBtn">⚙️ Configure API</button>
+                    <div id="apiConfigPanel" class="api-config-panel hidden">
+                        <div class="form-group">
+                            <label for="apiProvider">AI Provider</label>
+                            <select id="apiProvider" class="input-field">
+                                <option value="openai">OpenAI (GPT-4)</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                                <option value="local">Local LLM (Ollama)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="apiKeyGroup">
+                            <label for="apiKey">API Key</label>
+                            <input type="password" id="apiKey" class="input-field" placeholder="sk-...">
+                            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                Your key is stored locally and never sent to our servers
+                            </p>
+                        </div>
+                        <div class="form-group hidden" id="localUrlGroup">
+                            <label for="localUrl">Ollama URL</label>
+                            <input type="text" id="localUrl" class="input-field" placeholder="http://localhost:11434" value="http://localhost:11434">
+                        </div>
+                        <button class="btn btn-primary" id="saveApiConfigBtn">Save Configuration</button>
+                    </div>
+                </div>
+
+                <div class="chat-container" id="chatContainer">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-message assistant">
+                            <strong>AI Assistant:</strong> Hi! I can help you customize your NFT frame. Try saying things like:
+                            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                <li>"Make the frame gold with a 2 inch border"</li>
+                                <li>"Change the QR code to silver with a thick border"</li>
+                                <li>"Use a black mat board"</li>
+                                <li>"Make it 24x36 inches"</li>
+                                <li>"Put the QR code in the bottom right"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <textarea 
+                        id="chatInput" 
+                        class="chat-input" 
+                        placeholder="Describe how you want to customize your frame..."
+                        rows="2"
+                    ></textarea>
+                    <button id="sendChatBtn" class="btn btn-primary">
+                        <span id="sendBtnText">Send</span>
+                        <span id="sendBtnLoader" class="hidden">⏳</span>
+                    </button>
+                </div>
+
+                <div class="quick-prompts">
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Quick commands:</p>
+                    <div class="quick-prompt-buttons">
+                        <button class="quick-prompt-btn" data-prompt="Make it elegant and classic">Elegant & Classic</button>
+                        <button class="quick-prompt-btn" data-prompt="Make it modern and minimalist">Modern & Minimal</button>
+                        <button class="quick-prompt-btn" data-prompt="Make it bold and vibrant">Bold & Vibrant</button>
+                        <button class="quick-prompt-btn" data-prompt="Vintage gallery style">Vintage Gallery</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 4: Print Size Selection -->
+            <section class="card hidden" id="size-selection-section">
+                <h2>4. Select Print Size</h2>
+                <div class="size-grid">
+                    <button class="size-btn" data-width="4" data-height="6">4" × 6"</button>
+                    <button class="size-btn" data-width="5" data-height="7">5" × 7"</button>
+                    <button class="size-btn" data-width="8" data-height="10">8" × 10"</button>
+                    <button class="size-btn" data-width="11" data-height="14">11" × 14"</button>
+                    <button class="size-btn" data-width="12" data-height="16">12" × 16"</button>
+                    <button class="size-btn" data-width="16" data-height="20">16" × 20"</button>
+                    <button class="size-btn" data-width="18" data-height="24">18" × 24"</button>
+                    <button class="size-btn" data-width="24" data-height="36">24" × 36"</button>
+                    <button class="size-btn" data-width="30" data-height="40">30" × 40"</button>
+                    <button class="size-btn" data-width="40" data-height="20">40" × 20"</button>
+                    <button class="size-btn" data-width="20" data-height="40">20" × 40"</button>
+                </div>
+                <div id="selectedSize" class="selected-info"></div>
+            </section>
+
+            <!-- Step 5: Frame Customization -->
+            <section class="card hidden" id="frame-customization-section">
+                <h2>5. Customize Frame (or use AI Assistant above)</h2>
+                
+                <div class="form-group">
+                    <label>Border Size</label>
+                    <div class="button-group">
+                        <button class="option-btn" data-border="0.5">Thin (0.5")</button>
+                        <button class="option-btn" data-border="1">Standard (1")</button>
+                        <button class="option-btn active" data-border="2">Medium (2")</button>
+                        <button class="option-btn" data-border="3">Thick (3")</button>
+                        <button class="option-btn" data-border="4">Extra Thick (4")</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Frame Material</label>
+                    <div class="button-group">
+                        <button class="option-btn" data-material="wood-black">Black Wood</button>
+                        <button class="option-btn" data-material="wood-walnut">Walnut</button>
+                        <button class="option-btn" data-material="wood-oak">Oak</button>
+                        <button class="option-btn active" data-material="metal-gold">Gold Metal</button>
+                        <button class="option-btn" data-material="metal-silver">Silver Metal</button>
+                        <button class="option-btn" data-material="metal-bronze">Bronze Metal</button>
+                        <button class="option-btn" data-material="metal-black">Black Metal</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>QR Code Position</label>
+                    <div class="button-group">
+                        <button class="option-btn" data-qr-position="bottom-right">Bottom Right</button>
+                        <button class="option-btn active" data-qr-position="bottom-center">Bottom Center</button>
+                        <button class="option-btn" data-qr-position="bottom-left">Bottom Left</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>QR Code Size</label>
+                    <div class="button-group">
+                        <button class="option-btn" data-qr-size="small">Small</button>
+                        <button class="option-btn active" data-qr-size="medium">Medium</button>
+                        <button class="option-btn" data-qr-size="large">Large</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>QR Code Border Color</label>
+                    <div class="button-group">
+                        <button class="option-btn active" data-qr-border-color="#ffd700">Gold</button>
+                        <button class="option-btn" data-qr-border-color="#c0c0c0">Silver</button>
+                        <button class="option-btn" data-qr-border-color="#000000">Black</button>
+                        <button class="option-btn" data-qr-border-color="#ffffff">White</button>
+                        <button class="option-btn" data-qr-border-color="#cd7f32">Bronze</button>
+                        <button class="option-btn" data-qr-border-color="#ff0000">Red</button>
+                        <button class="option-btn" data-qr-border-color="#0000ff">Blue</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>QR Code Border Width</label>
+                    <div class="button-group">
+                        <button class="option-btn" data-qr-border-width="0.05">Thin</button>
+                        <button class="option-btn active" data-qr-border-width="0.1">Standard</button>
+                        <button class="option-btn" data-qr-border-width="0.15">Medium</button>
+                        <button class="option-btn" data-qr-border-width="0.2">Thick</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Mat Board Color (Background Border)</label>
+                    <div class="button-group">
+                        <button class="option-btn active" data-mat-color="#ffffff">White</button>
+                        <button class="option-btn" data-mat-color="#f5f5dc">Cream</button>
+                        <button class="option-btn" data-mat-color="#000000">Black</button>
+                        <button class="option-btn" data-mat-color="#2c2c2c">Charcoal</button>
+                        <button class="option-btn" data-mat-color="#8b4513">Brown</button>
+                        <button class="option-btn" data-mat-color="#4169e1">Royal Blue</button>
+                        <button class="option-btn" data-mat-color="#dc143c">Crimson</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 6: Preview & Download -->
+            <section class="card hidden" id="preview-section">
+                <h2>6. Preview & Download</h2>
+                <div class="preview-container">
+                    <canvas id="previewCanvas"></canvas>
+                </div>
+                <div class="action-buttons">
+                    <button id="generateBtn" class="btn btn-primary">Generate Frame</button>
+                    <button id="downloadBtn" class="btn btn-success hidden">Download High-Res Image</button>
+                </div>
+                <p class="info-text">The downloaded image will be at print resolution (300 DPI)</p>
+            </section>
+
+            <!-- Step 7: Print Recommendations -->
+            <section class="card hidden" id="print-recommendations-section">
+                <h2>7. Print & Pricing Recommendations</h2>
+                
+                <div class="pricing-estimate" id="pricingEstimate">
+                    <h3>💰 Estimated Pricing</h3>
+                    <p class="estimate-note">Based on your selected size: <strong id="priceSize"></strong></p>
+                    <div class="price-grid" id="priceGrid"></div>
+                </div>
+
+                <div class="print-sites">
+                    <h3>🖨️ Recommended Print Sites</h3>
+                    <p class="info-text">Upload your high-res image to these professional print services:</p>
+                    
+                    <div class="site-card">
+                        <div class="site-header">
+                            <h4>🏆 Printful</h4>
+                            <span class="badge">Best Overall</span>
+                        </div>
+                        <p class="site-desc">High-quality prints, worldwide shipping, excellent for custom framing</p>
+                        <ul class="site-features">
+                            <li>✓ Premium paper options (Giclée, Canvas, Metal)</li>
+                            <li>✓ Professional framing services available</li>
+                            <li>✓ Ships in 2-5 business days</li>
+                        </ul>
+                        <a href="https://www.printful.com/custom/wall-art" target="_blank" class="btn btn-small">Visit Printful →</a>
+                    </div>
+
+                    <div class="site-card">
+                        <div class="site-header">
+                            <h4>💎 Mpix</h4>
+                            <span class="badge">Best Quality</span>
+                        </div>
+                        <p class="site-desc">Professional photo lab, exceptional color accuracy and detail</p>
+                        <ul class="site-features">
+                            <li>✓ Museum-quality archival prints</li>
+                            <li>✓ Wide frame selection</li>
+                            <li>✓ Color-corrected by professionals</li>
+                        </ul>
+                        <a href="https://www.mpix.com/products/prints" target="_blank" class="btn btn-small">Visit Mpix →</a>
+                    </div>
+
+                    <div class="site-card">
+                        <div class="site-header">
+                            <h4>📦 Nations Photo Lab</h4>
+                            <span class="badge">Best Value</span>
+                        </div>
+                        <p class="site-desc">Affordable professional prints with great framing options</p>
+                        <ul class="site-features">
+                            <li>✓ Budget-friendly pricing</li>
+                            <li>✓ Various mounting options</li>
+                            <li>✓ Bulk order discounts</li>
+                        </ul>
+                        <a href="https://www.nationsphotolab.com" target="_blank" class="btn btn-small">Visit Nations Photo Lab →</a>
+                    </div>
+
+                    <div class="site-card">
+                        <div class="site-header">
+                            <h4>🎨 Canvaspop</h4>
+                            <span class="badge">Best for Canvas</span>
+                        </div>
+                        <p class="site-desc">Specializes in canvas prints and gallery wraps</p>
+                        <ul class="site-features">
+                            <li>✓ Museum-grade canvas</li>
+                            <li>✓ Hand-stretched and inspected</li>
+                            <li>✓ Lifetime guarantee</li>
+                        </ul>
+                        <a href="https://www.canvaspop.com" target="_blank" class="btn btn-small">Visit Canvaspop →</a>
+                    </div>
+
+                    <div class="site-card">
+                        <div class="site-header">
+                            <h4>⚡ Shutterfly</h4>
+                            <span class="badge">Fast & Easy</span>
+                        </div>
+                        <p class="site-desc">Quick turnaround, user-friendly, frequent sales</p>
+                        <ul class="site-features">
+                            <li>✓ Simple upload process</li>
+                            <li>✓ Regular promotions and discounts</li>
+                            <li>✓ Same-day pickup at stores</li>
+                        </ul>
+                        <a href="https://www.shutterfly.com/photo-prints" target="_blank" class="btn btn-small">Visit Shutterfly →</a>
+                    </div>
+
+                    <div class="site-card">
+                        <div class="site-header">
+                            <h4>🖼️ FrameItEasy</h4>
+                            <span class="badge">Custom Framing</span>
+                        </div>
+                        <p class="site-desc">Custom frame builder with thousands of combinations</p>
+                        <ul class="site-features">
+                            <li>✓ Build your own custom frame</li>
+                            <li>✓ Real-time preview</li>
+                            <li>✓ Professional matting options</li>
+                        </ul>
+                        <a href="https://www.frameiteasy.com" target="_blank" class="btn btn-small">Visit FrameItEasy →</a>
+                    </div>
+                </div>
+
+                <div class="upload-tips">
+                    <h3>📤 Upload Tips</h3>
+                    <ul class="tips-list">
+                        <li><strong>File Format:</strong> Upload as PNG for best quality (your download is already optimized)</li>
+                        <li><strong>Resolution:</strong> Your image is 300 DPI - perfect for professional printing</li>
+                        <li><strong>Color Profile:</strong> Most sites auto-convert, but sRGB works best</li>
+                        <li><strong>Paper Type:</strong> Lustre or Matte finish recommended for NFT art</li>
+                        <li><strong>Framing:</strong> Your QR code is already styled - choose a simple frame or go frameless</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Created with ❤️ for NFT collectors</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="app.js?v=4"></script>
+</body>
+</html>

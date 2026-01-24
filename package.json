@@ -1,0 +1,27 @@
+{
+  "name": "nft-frame-studio-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for NFT Frame Studio - Generate custom frames for NFTs",
+  "type": "module",
+  "main": "mcp-server.js",
+  "scripts": {
+    "start": "node mcp-server.js",
+    "test": "node test-mcp.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "ethers": "^6.10.0",
+    "canvas": "^2.11.2",
+    "qrcode": "^1.5.3",
+    "node-fetch": "^3.3.2"
+  },
+  "keywords": [
+    "mcp",
+    "nft",
+    "framing",
+    "blockchain",
+    "ethereum"
+  ],
+  "author": "",
+  "license": "MIT"
+}

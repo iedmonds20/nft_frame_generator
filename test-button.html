@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Button</title>
+</head>
+<body>
+    <h1>Quick Test</h1>
+    <button id="testBtn">Test Button</button>
+    <div id="output"></div>
+    
+    <script>
+        console.log('Script loaded');
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM ready');
+            
+            const btn = document.getElementById('testBtn');
+            console.log('Button:', btn);
+            
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    console.log('Button clicked!');
+                    document.getElementById('output').textContent = 'Button works! ✓';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

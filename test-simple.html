@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test</title>
+</head>
+<body>
+    <h1>Simple Function Test</h1>
+    
+    <button onclick="testFunction()">Test Button 1</button>
+    <button id="testBtn2">Test Button 2</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        // Inline function
+        function testFunction() {
+            alert('Test function works!');
+            document.getElementById('output').innerHTML = '<p>Button 1 works!</p>';
+        }
+        
+        // Event listener
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn2 = document.getElementById('testBtn2');
+            if (btn2) {
+                btn2.addEventListener('click', () => {
+                    alert('Button 2 works!');
+                    document.getElementById('output').innerHTML = '<p>Button 2 works!</p>';
+                });
+            }
+        });
+        
+        // Log that script loaded
+        console.log('Script loaded successfully');
+        alert('Page loaded - script is running');
+    </script>
+</body>
+</html>
