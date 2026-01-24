@@ -156,6 +156,17 @@ async function loadNFT() {
             return;
         }
         
+        // Validate token ID is numeric and reasonable
+        if (!/^\d+$/.test(tokenIdInput)) {
+            showError('Token ID must be a positive number');
+            return;
+        }
+        
+        if (tokenIdInput.length > 78) { // uint256 max is ~78 digits
+            showError('Token ID is too large');
+            return;
+        }
+        
         state.contractAddress = contractInput;
         state.tokenId = tokenIdInput;
         state.network = network;
@@ -632,9 +643,41 @@ function hideError() {
 
 // ==================== AI ASSISTANT FUNCTIONALITY ====================
 
+// Simple encryption for API keys (basic obfuscation - not cryptographically secure but better than plain text)
+function encodeKey(key) {
+    if (!key) return '';
+    return btoa(key.split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 256))).join(''));
+}
+
+function decodeKey(encoded) {
+    if (!encoded) return '';
+    try {
+        return atob(encoded).split('').map((c, i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 256))).join('');
+    } catch {
+        return encoded; // Return as-is if not encoded (for backward compatibility)
+    }
+}
+
+// Rate limiting for API calls
+const rateLimiter = {
+    calls: [],
+    maxCalls: 10,
+    timeWindow: 60000, // 1 minute
+    
+    canMakeCall() {
+        const now = Date.now();
+        this.calls = this.calls.filter(time => now - time < this.timeWindow);
+        return this.calls.length < this.maxCalls;
+    },
+    
+    recordCall() {
+        this.calls.push(Date.now());
+    }
+};
+
 let aiConfig = {
     provider: localStorage.getItem('ai_provider') || 'openai',
-    apiKey: localStorage.getItem('ai_api_key') || '',
+    apiKey: decodeKey(localStorage.getItem('ai_api_key_enc')) || '',
     localUrl: localStorage.getItem('ai_local_url') || 'http://localhost:11434'
 };
 
@@ -713,10 +756,13 @@ function saveApiConfig() {
     if (keyEl) aiConfig.apiKey = keyEl.value;
     if (urlEl) aiConfig.localUrl = urlEl.value;
     
-    // Save to localStorage
-    localStorage.setItem('ai_api_key', aiConfig.apiKey);
+    // Save to localStorage with encryption for API key
+    localStorage.setItem('ai_api_key_enc', encodeKey(aiConfig.apiKey));
     localStorage.setItem('ai_local_url', aiConfig.localUrl);
     localStorage.setItem('ai_provider', aiConfig.provider);
+    
+    // Remove old unencrypted key if it exists
+    localStorage.removeItem('ai_api_key');
     
     addChatMessage('assistant', 'Configuration saved! You can now use AI assistance.');
     
@@ -748,11 +794,20 @@ async function sendChatMessage() {
     
     if (!message) return;
     
+    // Rate limiting check
+    if (!rateLimiter.canMakeCall()) {
+        addChatMessage('error', 'Rate limit exceeded. Please wait a minute before making more AI requests.');
+        return;
+    }
+    
     // Check if API is configured
     if (aiConfig.provider !== 'local' && !aiConfig.apiKey) {
         addChatMessage('error', 'Please configure your API key first by clicking the "Configure API" button above.');
         return;
     }
+    
+    // Record API call for rate limiting
+    rateLimiter.recordCall();
     
     // Add user message to chat
     addChatMessage('user', message);
@@ -791,7 +846,15 @@ function addChatMessage(type, content) {
                    type === 'assistant' ? '<strong>AI Assistant:</strong> ' : 
                    '<strong>Error:</strong> ';
     
-    messageDiv.innerHTML = prefix + content;
+    // Sanitize content to prevent XSS
+    const sanitizedContent = content
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+        .replace(/\n/g, '<br>');
+    messageDiv.innerHTML = prefix + sanitizedContent;
     messagesContainer.appendChild(messageDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }

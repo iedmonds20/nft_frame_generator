@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Create custom frames for your NFTs with QR codes">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://eth.llamarpc.com https://api.openai.com https://api.anthropic.com http://localhost:*; font-src 'self' data:;">
     <title>NFT Frame Studio</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -366,6 +367,14 @@
 
         <footer>
             <p>Created with ❤️ for NFT collectors</p>
+            <div class="security-notice" style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border-radius: 8px; font-size: 0.85rem; color: #856404;">
+                <strong>🔒 Privacy & Security Notice:</strong><br>
+                • This app runs entirely in your browser - no data is sent to our servers<br>
+                • NFT data is fetched from public blockchain via RPC endpoint (eth.llamarpc.com)<br>
+                • AI Assistant API keys (if used) are stored in your browser's local storage<br>
+                • <strong>Warning:</strong> Never use production/funded API keys. Use restricted, low-limit keys only<br>
+                • Clear your browser data to remove stored API keys
+            </div>
         </footer>
     </div>
 
