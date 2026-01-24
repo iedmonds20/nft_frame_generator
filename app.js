@@ -1,5 +1,3 @@
-alert('APP.JS IS LOADING - YOU SHOULD SEE THIS IMMEDIATELY!');
-
 // App State
 const state = {
     nftData: null,
@@ -138,7 +136,6 @@ function initializeEventListeners() {
 }
 
 async function loadNFT() {
-    alert('Step 1: loadNFT function called');
     console.log('=== loadNFT called ===');
     
     try {
@@ -146,19 +143,16 @@ async function loadNFT() {
         const tokenIdInput = document.getElementById('tokenId').value.trim();
         const network = document.getElementById('network').value;
         
-        alert('Step 2: Got inputs - Contract: ' + contractInput.substring(0, 10) + '... Token: ' + tokenIdInput);
         console.log('Inputs:', { contractInput, tokenIdInput, network });
         
         // Validation
         if (!contractInput || !tokenIdInput) {
             showError('Please enter both contract address and token ID');
-            alert('Error: Missing inputs');
             return;
         }
         
         if (!/^0x[a-fA-F0-9]{40}$/.test(contractInput)) {
             showError('Invalid contract address format');
-            alert('Error: Invalid contract format');
             return;
         }
         
@@ -166,30 +160,25 @@ async function loadNFT() {
         state.tokenId = tokenIdInput;
         state.network = network;
         
-        alert('Step 3: Starting to fetch NFT data...');
         showLoading(true);
         hideError();
         
         console.log('Fetching metadata...');
         
         // Fetch NFT metadata
-        alert('Step 4: Fetching metadata from blockchain...');
         const metadata = await fetchNFTMetadata(contractInput, tokenIdInput, network);
         
         if (!metadata.image) {
-            alert('Error: No image in metadata');
             throw new Error('No image found in NFT metadata');
         }
         
         state.nftData = metadata;
         
         // Display NFT
-        alert('Step 5: Displaying NFT...');
         console.log('Displaying NFT...');
         displayNFT(metadata);
         
         // Show next sections
-        alert('Step 6: Revealing next sections...');
         console.log('Showing sections...');
         document.getElementById('nft-preview-section').classList.remove('hidden');
         document.getElementById('ai-assistant-section').classList.remove('hidden');
@@ -197,7 +186,6 @@ async function loadNFT() {
         document.getElementById('frame-customization-section').classList.remove('hidden');
         document.getElementById('preview-section').classList.remove('hidden');
         
-        alert('Step 7: SUCCESS! All sections shown. You should see your NFT now!');
         console.log('Sections shown successfully');
         
         // Scroll to next section
@@ -219,7 +207,6 @@ async function loadNFT() {
         console.log('=== loadNFT completed successfully ===');
         
     } catch (error) {
-        alert('ERROR in loadNFT: ' + error.message);
         console.error('=== Error in loadNFT ===', error);
         showError(error.message || 'Failed to load NFT. Please check the contract address and token ID.');
         showLoading(false);
