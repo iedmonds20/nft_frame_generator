@@ -380,6 +380,14 @@
 
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="app.js?v=4"></script>
+    <script>
+        // Wait for ethers.js to load before loading app.js
+        window.addEventListener('load', function() {
+            if (typeof ethers === 'undefined') {
+                alert('Failed to load ethers.js library. Please refresh the page.');
+            }
+        });
+    </script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>

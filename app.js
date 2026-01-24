@@ -138,6 +138,13 @@ function initializeEventListeners() {
 async function loadNFT() {
     console.log('=== loadNFT called ===');
     
+    // Check if ethers.js is loaded
+    if (typeof ethers === 'undefined') {
+        showError('Required library not loaded. Please refresh the page.');
+        console.error('ethers.js library is not loaded');
+        return;
+    }
+    
     try {
         const contractInput = document.getElementById('contract').value.trim();
         const tokenIdInput = document.getElementById('tokenId').value.trim();
