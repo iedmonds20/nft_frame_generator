@@ -237,22 +237,32 @@ async function fetchNFTMetadata(contractAddress, tokenId, network) {
         const openseaUrl = `https://api.opensea.io/api/v2/chain/ethereum/contract/${contractAddress}/nfts/${tokenId}`;
         
         try {
-            const openseaResponse = await fetch(openseaUrl);
+            console.log('Trying OpenSea API...');
+            const openseaResponse = await fetch(openseaUrl, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
             if (openseaResponse.ok) {
                 const data = await openseaResponse.json();
-                return {
-                    name: data.nft?.name || `NFT #${tokenId}`,
-                    description: data.nft?.description || '',
-                    image: data.nft?.image_url || data.nft?.display_image_url,
-                    contractAddress,
-                    tokenId
-                };
+                console.log('OpenSea data:', data);
+                if (data.nft && (data.nft.image_url || data.nft.display_image_url)) {
+                    return {
+                        name: data.nft?.name || `NFT #${tokenId}`,
+                        description: data.nft?.description || '',
+                        image: data.nft?.image_url || data.nft?.display_image_url,
+                        contractAddress,
+                        tokenId
+                    };
+                }
             }
+            console.log('OpenSea API returned status:', openseaResponse.status);
         } catch (e) {
-            console.log('OpenSea API not available, trying direct contract call');
+            console.log('OpenSea API error:', e.message);
         }
         
         // Fallback: Try to read directly from contract using ethers.js
+        console.log('Trying direct blockchain call...');
         const provider = new ethers.providers.JsonRpcProvider(METADATA_STANDARDS[network].rpcUrl);
         
         // ERC-721 ABI for tokenURI
@@ -267,8 +277,10 @@ async function fetchNFTMetadata(contractAddress, tokenId, network) {
         let tokenURI;
         try {
             tokenURI = await contract.tokenURI(tokenId);
+            console.log('Token URI:', tokenURI);
         } catch (error) {
-            throw new Error('Unable to fetch NFT metadata. The contract may not be ERC-721 compliant.');
+            console.error('Contract call error:', error);
+            throw new Error('Unable to fetch NFT metadata. The contract may not be ERC-721 compliant or the token ID may not exist.');
         }
         
         // Handle IPFS URLs
@@ -277,12 +289,21 @@ async function fetchNFTMetadata(contractAddress, tokenId, network) {
         }
         
         // Fetch metadata from tokenURI
+        console.log('Fetching metadata from:', tokenURI);
         const metadataResponse = await fetch(tokenURI);
+        if (!metadataResponse.ok) {
+            throw new Error(`Failed to fetch metadata from ${tokenURI}: ${metadataResponse.status}`);
+        }
         const metadata = await metadataResponse.json();
+        console.log('Metadata:', metadata);
         
         let imageUrl = metadata.image;
-        if (imageUrl.startsWith('ipfs://')) {
+        if (imageUrl && imageUrl.startsWith('ipfs://')) {
             imageUrl = imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/');
+        }
+        
+        if (!imageUrl) {
+            throw new Error('No image found in NFT metadata');
         }
         
         return {
@@ -295,6 +316,9 @@ async function fetchNFTMetadata(contractAddress, tokenId, network) {
         
     } catch (error) {
         console.error('Error fetching NFT metadata:', error);
+        if (error.message.includes('fetch')) {
+            throw new Error('Network error: Unable to connect to blockchain or metadata service. Please check your internet connection.');
+        }
         throw error;
     }
 }
