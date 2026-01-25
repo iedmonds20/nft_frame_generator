@@ -1275,8 +1275,12 @@ async function sendChatMessage() {
         return;
     }
     
-    // Check if API is configured (Hugging Face has a free token, so skip check for it)
-    if (aiConfig.provider !== 'local' && aiConfig.provider !== 'huggingface' && !aiConfig.apiKey) {
+    // Check if API is configured
+    // Only OpenAI and Anthropic require API keys
+    // Hugging Face and Local Ollama work without keys
+    const requiresApiKey = aiConfig.provider === 'openai' || aiConfig.provider === 'anthropic';
+    
+    if (requiresApiKey && !aiConfig.apiKey) {
         addChatMessage('error', 'Please configure your API key first by clicking the "Configure API" button above.');
         return;
     }
