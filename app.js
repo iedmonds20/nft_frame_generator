@@ -11,7 +11,8 @@ const state = {
     matColor: '#ffffff',
     contractAddress: '',
     tokenId: '',
-    network: 'ethereum'
+    network: 'ethereum',
+    ownershipProof: null // Will store { address, signature, timestamp, message }
 };
 
 // NFT Metadata Standards
@@ -182,6 +183,12 @@ function initializeEventListeners() {
     document.getElementById('downloadBtn').addEventListener('click', downloadFrame);
     document.getElementById('uploadIpfsBtn').addEventListener('click', uploadToIPFS);
     document.getElementById('copyIpfsBtn').addEventListener('click', copyIPFSLink);
+    
+    // Ownership Proof
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    if (connectWalletBtn) {
+        connectWalletBtn.addEventListener('click', connectWalletAndSign);
+    }
 }
 
 async function loadNFT() {
@@ -805,9 +812,8 @@ function getFrameColor(material) {
 }
 
 async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
-    // Create QR code URL (linking to NFT)
-    const explorer = METADATA_STANDARDS[state.network].explorer;
-    const qrUrl = `${explorer}/token/${state.contractAddress}?a=${state.tokenId}`;
+    // Create QR code URL with ownership proof if available
+    const qrUrl = generateQRCodeUrl() || `${METADATA_STANDARDS[state.network].explorer}/token/${state.contractAddress}?a=${state.tokenId}`;
     
     // QR code size based on selection
     const qrSizes = {
@@ -1668,6 +1674,112 @@ function applyFrameChanges(changes) {
     
     generatePreview();
     return applied;
+}
+
+// ==================== OWNERSHIP PROOF FUNCTIONALITY ====================
+
+async function connectWalletAndSign() {
+    const btn = document.getElementById('connectWalletBtn');
+    const originalText = btn.textContent;
+    
+    try {
+        // Check if NFT is loaded
+        if (!state.nftData) {
+            showError('Please load an NFT first before signing ownership proof');
+            return;
+        }
+        
+        btn.textContent = '⏳ Connecting wallet...';
+        btn.disabled = true;
+        
+        // Check for any Ethereum provider (MetaMask, Coinbase Wallet, etc.)
+        if (!window.ethereum) {
+            throw new Error('No Ethereum wallet detected. Please install MetaMask, Coinbase Wallet, or another Web3 wallet.');
+        }
+        
+        // Request account access
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const userAddress = accounts[0];
+        
+        console.log('Connected wallet:', userAddress);
+        
+        btn.textContent = '✍️ Waiting for signature...';
+        
+        // Create message to sign
+        const timestamp = new Date().toISOString();
+        const message = `I own this NFT:\n\nContract: ${state.contractAddress}\nToken ID: ${state.tokenId}\nNFT: ${state.nftData.name || 'Unnamed NFT'}\n\nTimestamp: ${timestamp}\n\nThis signature proves ownership at the time of framing.\nNo funds or permissions are granted by signing.`;
+        
+        // Request signature (works with any wallet)
+        const signature = await window.ethereum.request({
+            method: 'personal_sign',
+            params: [message, userAddress]
+        });
+        
+        console.log('Signature obtained');
+        
+        // Store proof in state
+        state.ownershipProof = {
+            address: userAddress,
+            signature: signature,
+            timestamp: timestamp,
+            message: message,
+            nftContract: state.contractAddress,
+            nftTokenId: state.tokenId,
+            nftName: state.nftData.name || 'Unnamed NFT'
+        };
+        
+        // Update UI
+        const statusDiv = document.getElementById('ownershipProofStatus');
+        const detailsSpan = document.getElementById('proofDetails');
+        
+        statusDiv.classList.remove('hidden');
+        detailsSpan.textContent = `Signed by: ${userAddress.substring(0, 6)}...${userAddress.substring(38)} on ${new Date(timestamp).toLocaleString()}`;
+        
+        btn.textContent = '✅ Proof Added - Click to Re-sign';
+        btn.disabled = false;
+        
+        // Show success message
+        addChatMessage('assistant', '✓ Ownership proof added! The QR code will now include verification data. Generate your frame to see the updated QR code with proof.');
+        
+    } catch (error) {
+        console.error('Wallet connection error:', error);
+        
+        if (error.code === 4001) {
+            showError('Signature rejected. Please approve the signature to add ownership proof.');
+        } else if (error.message.includes('No Ethereum wallet')) {
+            showError(error.message);
+        } else {
+            showError('Failed to connect wallet: ' + error.message);
+        }
+        
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
+// Update QR code generation to include ownership proof
+function generateQRCodeUrl() {
+    if (!state.nftData) return '';
+    
+    // Base URL pointing to verification page
+    const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+    let qrUrl = `${baseUrl}verify.html?contract=${state.contractAddress}&tokenId=${state.tokenId}`;
+    
+    // Add ownership proof if available
+    if (state.ownershipProof) {
+        const proofData = encodeURIComponent(JSON.stringify({
+            address: state.ownershipProof.address,
+            signature: state.ownershipProof.signature,
+            timestamp: state.ownershipProof.timestamp,
+            message: state.ownershipProof.message,
+            nftContract: state.ownershipProof.nftContract,
+            nftTokenId: state.ownershipProof.nftTokenId,
+            nftName: state.ownershipProof.nftName
+        }));
+        qrUrl += `&proof=${proofData}`;
+    }
+    
+    return qrUrl;
 }
 
 // IPFS Upload Functionality

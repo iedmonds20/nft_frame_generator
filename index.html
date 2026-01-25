@@ -304,6 +304,31 @@
                         <button class="option-btn" data-mat-color="#dc143c">Crimson</button>
                     </div>
                 </div>
+
+                <!-- Ownership Proof -->
+                <div class="form-group" style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid rgba(139, 92, 246, 0.2);">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🔐 Ownership Proof (Optional)</span>
+                        <span class="badge" style="background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem;">100% Safe</span>
+                    </label>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Prove you own this NFT by signing a message with your wallet. The QR code will include cryptographic proof that can be verified by anyone.
+                    </p>
+                    <div id="ownershipProofInfo" class="info-box" style="background: rgba(139, 92, 246, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 3px solid var(--primary-color);">
+                        <strong>✓ Safe to use:</strong><br>
+                        • No access to your funds<br>
+                        • No transaction authorization<br>
+                        • Just proves you control the wallet<br>
+                        • Works with any Ethereum wallet
+                    </div>
+                    <button id="connectWalletBtn" class="btn btn-primary" style="width: 100%;">
+                        🔗 Connect Wallet & Sign Proof
+                    </button>
+                    <div id="ownershipProofStatus" class="hidden" style="margin-top: 1rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border-left: 3px solid #10b981;">
+                        <strong>✓ Ownership Proof Added!</strong><br>
+                        <span id="proofDetails" style="font-size: 0.875rem; opacity: 0.9;"></span>
+                    </div>
+                </div>
             </section>
 
             <!-- Step 6: Preview & Download -->
@@ -460,6 +485,6 @@
             }
         });
     </script>
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=10"></script>
 </body>
 </html>
