@@ -180,6 +180,8 @@ function initializeEventListeners() {
     // Generate and Download
     document.getElementById('generateBtn').addEventListener('click', generatePreview);
     document.getElementById('downloadBtn').addEventListener('click', downloadFrame);
+    document.getElementById('uploadIpfsBtn').addEventListener('click', uploadToIPFS);
+    document.getElementById('copyIpfsBtn').addEventListener('click', copyIPFSLink);
 }
 
 async function loadNFT() {
@@ -648,8 +650,9 @@ async function generatePreview() {
     // Add subtle frame depth/shadow effect
     addFrameDepth(ctx, previewWidth, previewHeight, matteOffset);
     
-    // Show download button and recommendations
+    // Show download button and IPFS upload button
     document.getElementById('downloadBtn').classList.remove('hidden');
+    document.getElementById('uploadIpfsBtn').classList.remove('hidden');
     document.getElementById('print-recommendations-section').classList.remove('hidden');
     
     // Update pricing estimates
@@ -1567,4 +1570,80 @@ function applyFrameChanges(changes) {
     
     generatePreview();
     return applied;
+}
+
+// IPFS Upload Functionality
+async function uploadToIPFS() {
+    const uploadBtn = document.getElementById('uploadIpfsBtn');
+    const ipfsResult = document.getElementById('ipfsResult');
+    const canvas = document.getElementById('previewCanvas');
+    
+    if (!canvas) {
+        showError('Please generate a frame preview first');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        uploadBtn.textContent = '⏳ Uploading...';
+        uploadBtn.disabled = true;
+        ipfsResult.classList.add('hidden');
+        
+        // Convert canvas to blob
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', blob, 'nft-frame.png');
+        
+        // Upload to web3.storage (free IPFS pinning service)
+        // Using public gateway - for production, users should get their own API key from web3.storage
+        const response = await fetch('https://api.web3.storage/upload', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDg5QjBGRjYxNjc2MThiNDRkQzlFNjkzNmFBMWQ3NjExNjFjNjU1MzUiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2NzA0MjU2NzQwNjAsIm5hbWUiOiJORlQgRnJhbWUgR2VuZXJhdG9yIn0.xQK8VXx_5lMr4MQ4xB_hQfQqGZLQ8YzXQMxZGQGYH8o'
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error('Upload failed: ' + response.statusText);
+        }
+        
+        const data = await response.json();
+        const ipfsUrl = `https://w3s.link/ipfs/${data.cid}`;
+        
+        // Show result
+        document.getElementById('ipfsLink').href = ipfsUrl;
+        document.getElementById('ipfsLink').textContent = ipfsUrl;
+        ipfsResult.classList.remove('hidden');
+        
+        uploadBtn.textContent = '✅ Uploaded!';
+        setTimeout(() => {
+            uploadBtn.textContent = '📤 Upload to IPFS';
+            uploadBtn.disabled = false;
+        }, 3000);
+        
+    } catch (error) {
+        console.error('IPFS upload error:', error);
+        showError('Failed to upload to IPFS: ' + error.message);
+        uploadBtn.textContent = '📤 Upload to IPFS';
+        uploadBtn.disabled = false;
+    }
+}
+
+function copyIPFSLink() {
+    const ipfsLink = document.getElementById('ipfsLink').textContent;
+    const copyBtn = document.getElementById('copyIpfsBtn');
+    
+    navigator.clipboard.writeText(ipfsLink).then(() => {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = '✅ Copied!';
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        showError('Failed to copy link');
+    });
 }

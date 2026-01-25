@@ -310,6 +310,12 @@
                 <div class="action-buttons">
                     <button id="generateBtn" class="btn btn-primary">Generate Frame</button>
                     <button id="downloadBtn" class="btn btn-success hidden">Download High-Res Image</button>
+                    <button id="uploadIpfsBtn" class="btn btn-primary hidden" style="margin-top: 1rem;">📤 Upload to IPFS</button>
+                </div>
+                <div id="ipfsResult" class="ipfs-result hidden" style="margin-top: 1.5rem; padding: 1rem; background: rgba(139, 92, 246, 0.1); border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.2);">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--primary-color);">🎉 Uploaded to IPFS!</h3>
+                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem; word-break: break-all;"><strong>IPFS URL:</strong> <a id="ipfsLink" href="#" target="_blank" style="color: var(--primary-color);"></a></p>
+                    <button id="copyIpfsBtn" class="btn btn-primary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">📋 Copy Link</button>
                 </div>
                 <p class="info-text">The downloaded image will be at print resolution (300 DPI)</p>
             </section>
