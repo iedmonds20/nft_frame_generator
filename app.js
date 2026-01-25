@@ -593,8 +593,15 @@ async function generatePreview() {
     canvas.width = previewWidth;
     canvas.height = previewHeight;
     
-    // Load NFT image
-    const img = await loadImage(state.nftData.image);
+    // Load NFT image with enhanced error handling
+    let img;
+    try {
+        img = await loadImage(state.nftData.image);
+    } catch (error) {
+        console.error('Failed to load NFT image:', error);
+        showError('Failed to load NFT image. The image may be blocked by CORS or unavailable.');
+        return;
+    }
     
     // Draw frame with enhanced rendering
     drawEnhancedFrame(ctx, previewWidth, previewHeight, borderPixels, state.frameMaterial);
@@ -995,30 +1002,82 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
 
 function loadImage(src) {
     return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
+        console.log('Loading image from:', src);
         
-        img.onload = () => {
-            console.log('Image loaded successfully:', src);
-            resolve(img);
+        const tryLoadImage = (imageUrl, useCORS = true) => {
+            return new Promise((res, rej) => {
+                const img = new Image();
+                if (useCORS) {
+                    img.crossOrigin = 'anonymous';
+                }
+                
+                img.onload = () => {
+                    console.log('Image loaded successfully:', imageUrl);
+                    res(img);
+                };
+                
+                img.onerror = (error) => {
+                    console.error('Image load error:', imageUrl, error);
+                    rej(error);
+                };
+                
+                img.src = imageUrl;
+            });
         };
         
-        img.onerror = (error) => {
-            console.error('Image load error:', src, error);
-            // Try without CORS as fallback
-            const imgFallback = new Image();
-            imgFallback.onload = () => resolve(imgFallback);
-            imgFallback.onerror = () => reject(new Error('Failed to load image'));
-            imgFallback.src = src;
-        };
-        
-        // Handle data URLs and IPFS gateway URLs
-        if (src.startsWith('data:') || src.includes('ipfs.io')) {
-            img.src = src;
-        } else {
-            // Try with CORS proxy for external images
-            img.src = src;
+        // Normalize IPFS URLs
+        let normalizedSrc = src;
+        if (src.startsWith('ipfs://')) {
+            normalizedSrc = src.replace('ipfs://', 'https://ipfs.io/ipfs/');
         }
+        
+        // Try multiple loading strategies
+        const loadStrategies = [
+            // Strategy 1: Direct load with CORS
+            () => tryLoadImage(normalizedSrc, true),
+            
+            // Strategy 2: Direct load without CORS
+            () => tryLoadImage(normalizedSrc, false),
+            
+            // Strategy 3: Use alternative IPFS gateway
+            () => {
+                if (normalizedSrc.includes('ipfs.io')) {
+                    const ipfsHash = normalizedSrc.split('/ipfs/')[1];
+                    return tryLoadImage(`https://cloudflare-ipfs.com/ipfs/${ipfsHash}`, true);
+                }
+                return Promise.reject(new Error('Not IPFS'));
+            },
+            
+            // Strategy 4: Use another IPFS gateway
+            () => {
+                if (normalizedSrc.includes('ipfs.io')) {
+                    const ipfsHash = normalizedSrc.split('/ipfs/')[1];
+                    return tryLoadImage(`https://gateway.pinata.cloud/ipfs/${ipfsHash}`, true);
+                }
+                return Promise.reject(new Error('Not IPFS'));
+            },
+            
+            // Strategy 5: CORS proxy
+            () => tryLoadImage(`https://corsproxy.io/?${encodeURIComponent(normalizedSrc)}`, false)
+        ];
+        
+        // Try each strategy in sequence
+        const tryNext = async (index) => {
+            if (index >= loadStrategies.length) {
+                reject(new Error('All image loading strategies failed'));
+                return;
+            }
+            
+            try {
+                const img = await loadStrategies[index]();
+                resolve(img);
+            } catch (error) {
+                console.log(`Strategy ${index + 1} failed, trying next...`);
+                tryNext(index + 1);
+            }
+        };
+        
+        tryNext(0);
     });
 }
 
