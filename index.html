@@ -140,15 +140,15 @@
                         <div class="form-group">
                             <label for="apiProvider">AI Provider</label>
                             <select id="apiProvider" class="input-field">
-                                <option value="huggingface">🆓 Hugging Face (Free - Get token in 30 sec)</option>
+                                <option value="huggingface">🆓 Hugging Face (Free - Works instantly!)</option>
                                 <option value="openai">OpenAI (GPT-4)</option>
                                 <option value="anthropic">Anthropic (Claude)</option>
                                 <option value="local">Local LLM (Ollama)</option>
                             </select>
                         </div>
                         <div class="form-group" id="apiKeyGroup">
-                            <label for="apiKey">API Key <span id="apiKeyOptional" class="badge" style="display: none; background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">✓ Free token (30 sec setup)</span></label>
-                            <input type="password" id="apiKey" class="input-field" placeholder="hf_...">
+                            <label for="apiKey">API Key <span id="apiKeyOptional" class="badge" style="display: none; background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">✓ Optional - works out of the box!</span></label>
+                            <input type="password" id="apiKey" class="input-field" placeholder="(Optional - default provided)">
                             <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;" id="apiKeyHelp">
                                 Your key is stored locally and never sent to our servers
                             </p>
@@ -164,16 +164,8 @@
                 <div class="chat-container" id="chatContainer">
                     <div class="chat-messages" id="chatMessages">
                         <div class="chat-message assistant">
-                            <strong>AI Assistant:</strong> 👋 Hi! I'm ready to help you customize your NFT frame using <strong>Hugging Face AI</strong> (100% free!). 
-                            <p style="margin-top: 0.5rem; padding: 0.75rem; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 3px solid var(--primary-color);">
-                                <strong>Quick Setup (30 seconds):</strong><br>
-                                1. Click "Configure API" above<br>
-                                2. Click <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--primary-color); text-decoration: underline;">this link</a> to get your free token<br>
-                                3. Click "New token" → "Read" → Copy the token<br>
-                                4. Paste it and click Save!<br>
-                                <small style="opacity: 0.8;">✓ Completely free • ✓ No credit card • ✓ Takes 30 seconds</small>
-                            </p>
-                            <p style="margin-top: 0.75rem;">Once set up, try saying things like:</p>
+                            <strong>AI Assistant:</strong> 👋 Hi! I'm ready to help you customize your NFT frame using <strong>Hugging Face AI</strong> - just start typing!
+                            <p style="margin-top: 0.75rem; font-size: 0.9rem;">Try saying things like:</p>
                             <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
                                 <li>"Make the frame gold with a 2 inch border"</li>
                                 <li>"Change the QR code to silver with a thick border"</li>
@@ -181,6 +173,9 @@
                                 <li>"Make it 24x36 inches"</li>
                                 <li>"Put the QR code in the bottom right"</li>
                             </ul>
+                            <p style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(139, 92, 246, 0.1); border-radius: 6px; font-size: 0.85rem;">
+                                ✓ No setup required! Want faster responses? Add your own <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--primary-color);">free token</a> in Configure API.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -465,6 +460,6 @@
             }
         });
     </script>
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=8"></script>
 </body>
 </html>

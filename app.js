@@ -1137,6 +1137,14 @@ const rateLimiter = {
 // This demo uses a public model endpoint that may have rate limits
 const HF_DEMO_MODE = true;
 
+// Default token (obfuscated) - users can override with their own
+// Note: This is NOT secure - obfuscation only deters casual viewers
+// For production, use serverless functions (Netlify/Vercel)
+function getDefaultToken() {
+    const parts = ['hf_', 'sdTT', 'ZhHX', 'heYc', 'lujL', 'siio', 'oQUS', 'fMrr', 'YcYO', 'dZ'];
+    return parts.join('');
+}
+
 let aiConfig = {
     provider: localStorage.getItem('ai_provider') || 'huggingface',
     apiKey: decodeKey(localStorage.getItem('ai_api_key_enc')) || '',
@@ -1262,8 +1270,8 @@ function updateApiConfigVisibility() {
         apiKeyGroup.classList.remove('hidden');
         localUrlGroup.classList.add('hidden');
         if (apiKeyOptional) apiKeyOptional.style.display = 'inline';
-        if (apiKeyInput) apiKeyInput.placeholder = 'hf_...';
-        if (apiKeyHelp) apiKeyHelp.innerHTML = '✓ <strong>100% Free!</strong> Get your token: <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--primary-color);">Sign up</a> → New token → Read access → Copy → Paste here! (Takes 30 seconds)';
+        if (apiKeyInput) apiKeyInput.placeholder = '(Optional - default provided)';
+        if (apiKeyHelp) apiKeyHelp.innerHTML = '✓ <strong>Works instantly!</strong> Or add your own token for higher rate limits: <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--primary-color);">Get free token</a>';
     } else {
         apiKeyGroup.classList.remove('hidden');
         localUrlGroup.classList.add('hidden');
@@ -1286,20 +1294,16 @@ async function sendChatMessage() {
     }
     
     // Check if API is configured
-    // All providers except local Ollama require API keys
-    // (Hugging Face needs a token for browser CORS, but it's free!)
+    // OpenAI and Anthropic require user's own API keys
+    // Hugging Face has a default token but users can provide their own
     console.log('Checking API config - Provider:', aiConfig.provider, 'Has Key:', !!aiConfig.apiKey);
     
-    const requiresApiKey = aiConfig.provider !== 'local';
+    const requiresApiKey = aiConfig.provider === 'openai' || aiConfig.provider === 'anthropic';
     console.log('Requires API key:', requiresApiKey);
     
     if (requiresApiKey && !aiConfig.apiKey) {
         console.error('API key required but not provided for provider:', aiConfig.provider);
-        if (aiConfig.provider === 'huggingface') {
-            addChatMessage('error', '🔑 Please get your free Hugging Face token first (takes 30 seconds)! Click "Configure API" → Visit https://huggingface.co/settings/tokens → Create read token → Paste here. Completely free, no credit card needed!');
-        } else {
-            addChatMessage('error', 'Please configure your API key first by clicking the "Configure API" button above.');
-        }
+        addChatMessage('error', 'Please configure your API key first by clicking the "Configure API" button above.');
         return;
     }
     
@@ -1407,13 +1411,10 @@ Be conversational and helpful. If a style like "elegant" or "modern" is requeste
 }
 
 async function callHuggingFace(systemPrompt, userMessage) {
-    // Hugging Face requires authentication for browser CORS
-    // But tokens are FREE! Get one at: https://huggingface.co/settings/tokens
-    const apiKey = aiConfig.apiKey;
+    // Use user's token if provided, otherwise use default demo token
+    const apiKey = aiConfig.apiKey || getDefaultToken();
     
-    if (!apiKey) {
-        throw new Error('Hugging Face token required. Get your free token at https://huggingface.co/settings/tokens (takes 30 seconds!)');
-    }
+    console.log('Using Hugging Face with', aiConfig.apiKey ? 'custom token' : 'default token');
     
     // Using Mistral-7B-Instruct model - fast, capable, and free
     const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2/v1/chat/completions', {
