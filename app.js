@@ -481,13 +481,19 @@ async function generatePreview() {
     // Load NFT image
     const img = await loadImage(state.nftData.image);
     
-    // Draw gold border frame
-    ctx.fillStyle = getFrameColor(state.frameMaterial);
-    ctx.fillRect(0, 0, previewWidth, previewHeight);
+    // Draw frame with enhanced rendering
+    drawEnhancedFrame(ctx, previewWidth, previewHeight, borderPixels, state.frameMaterial);
     
     // Draw customizable matte/mat board
     const matteOffset = borderPixels * 0.2;
     ctx.fillStyle = state.matColor;
+    ctx.fillRect(matteOffset, matteOffset, previewWidth - (matteOffset * 2), previewHeight - (matteOffset * 2));
+    
+    // Add shadow on mat board for depth
+    const matShadowGradient = ctx.createLinearGradient(matteOffset, matteOffset, matteOffset + 20, matteOffset + 20);
+    matShadowGradient.addColorStop(0, 'rgba(0, 0, 0, 0.1)');
+    matShadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = matShadowGradient;
     ctx.fillRect(matteOffset, matteOffset, previewWidth - (matteOffset * 2), previewHeight - (matteOffset * 2));
     
     // Calculate image dimensions (maintaining aspect ratio)
@@ -562,6 +568,102 @@ function updatePricingEstimates() {
             <div style="margin-top: 0.5rem; opacity: 0.8; font-size: 0.875rem;">$${Math.round(item.framed)} framed</div>
         </div>
     `).join('');
+}
+
+function drawEnhancedFrame(ctx, width, height, borderSize, material) {
+    const baseColor = getFrameColor(material);
+    
+    // Draw base frame
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, width, height);
+    
+    // Add wood grain texture for wood materials
+    if (material.startsWith('wood-')) {
+        drawWoodGrain(ctx, width, height, borderSize, material);
+    }
+    
+    // Add beveled edge effect with highlights and shadows
+    const bevelSize = borderSize * 0.15;
+    
+    // Outer shadow (3D depth)
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = borderSize * 0.1;
+    ctx.shadowOffsetX = borderSize * 0.05;
+    ctx.shadowOffsetY = borderSize * 0.05;
+    
+    // Top and left highlights (light from top-left)
+    const highlightGradient = ctx.createLinearGradient(0, 0, bevelSize * 2, bevelSize * 2);
+    if (material.startsWith('wood-')) {
+        highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    } else {
+        highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    }
+    
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = highlightGradient;
+    // Top highlight
+    ctx.fillRect(0, 0, width, bevelSize * 2);
+    // Left highlight
+    ctx.fillRect(0, 0, bevelSize * 2, height);
+    
+    // Bottom and right shadows (shadow from bottom-right)
+    const shadowGradient = ctx.createLinearGradient(width - bevelSize * 2, height - bevelSize * 2, width, height);
+    shadowGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+    
+    ctx.fillStyle = shadowGradient;
+    // Bottom shadow
+    ctx.fillRect(0, height - bevelSize * 2, width, bevelSize * 2);
+    // Right shadow
+    ctx.fillRect(width - bevelSize * 2, 0, bevelSize * 2, height);
+}
+
+function drawWoodGrain(ctx, width, height, borderSize, material) {
+    // Create realistic wood grain texture
+    const grainDensity = 100;
+    const grainVariation = material === 'wood-oak' ? 0.3 : 0.2;
+    
+    ctx.globalAlpha = 0.15;
+    
+    // Draw vertical grain lines
+    for (let i = 0; i < grainDensity; i++) {
+        const x = (i / grainDensity) * width;
+        const variation = Math.random() * grainVariation;
+        
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        
+        // Create wavy grain pattern
+        for (let y = 0; y < height; y += 5) {
+            const wave = Math.sin(y * 0.05 + i * 0.1) * 2;
+            ctx.lineTo(x + wave, y);
+        }
+        
+        ctx.strokeStyle = `rgba(0, 0, 0, ${0.1 + variation})`;
+        ctx.lineWidth = Math.random() < 0.3 ? 2 : 1;
+        ctx.stroke();
+    }
+    
+    // Add knots for more realism
+    const numKnots = Math.floor((width * height) / 50000);
+    for (let i = 0; i < numKnots; i++) {
+        const knotX = Math.random() * width;
+        const knotY = Math.random() * height;
+        const knotSize = 10 + Math.random() * 20;
+        
+        const knotGradient = ctx.createRadialGradient(knotX, knotY, 0, knotX, knotY, knotSize);
+        knotGradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');
+        knotGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = knotGradient;
+        ctx.beginPath();
+        ctx.arc(knotX, knotY, knotSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    ctx.globalAlpha = 1.0;
 }
 
 function getFrameColor(material) {
@@ -780,9 +882,28 @@ function loadImage(src) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = src;
+        
+        img.onload = () => {
+            console.log('Image loaded successfully:', src);
+            resolve(img);
+        };
+        
+        img.onerror = (error) => {
+            console.error('Image load error:', src, error);
+            // Try without CORS as fallback
+            const imgFallback = new Image();
+            imgFallback.onload = () => resolve(imgFallback);
+            imgFallback.onerror = () => reject(new Error('Failed to load image'));
+            imgFallback.src = src;
+        };
+        
+        // Handle data URLs and IPFS gateway URLs
+        if (src.startsWith('data:') || src.includes('ipfs.io')) {
+            img.src = src;
+        } else {
+            // Try with CORS proxy for external images
+            img.src = src;
+        }
     });
 }
 
