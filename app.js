@@ -23,12 +23,33 @@ const METADATA_STANDARDS = {
     }
 };
 
+// Popular NFT Collections
+const POPULAR_COLLECTIONS = [
+    { name: 'Bored Ape Yacht Club', contract: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D', icon: '🐵', description: 'The iconic BAYC collection' },
+    { name: 'CryptoPunks', contract: '0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB', icon: '👾', description: 'The original NFT collection' },
+    { name: 'Mutant Ape Yacht Club', contract: '0x60E4d786628Fea6478F785A6d7e704777c86a7c6', icon: '🧬', description: 'BAYC mutant serum collection' },
+    { name: 'Azuki', contract: '0xED5AF388653567Af2F388E6224dC7C4b3241C544', icon: '🎴', description: 'Anime-inspired avatar collection' },
+    { name: 'Doodles', contract: '0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e', icon: '✏️', description: 'Colorful hand-drawn characters' },
+    { name: 'Clone X', contract: '0x49cF6f5d44E70224e2E23fDcdd2C053F30aDA28B', icon: '🤖', description: 'RTFKT Studios avatar collection' },
+    { name: 'Moonbirds', contract: '0x23581767a106ae21c074b2276D25e5C3e136a68b', icon: '🦉', description: 'Proof Collective NFT' },
+    { name: 'Pudgy Penguins', contract: '0xBd3531dA5CF5857e7CfAA92426877b022e612cf8', icon: '🐧', description: 'Adorable penguin collection' },
+    { name: 'World of Women', contract: '0xe785E82358879F061BC3dcAC6f0444462D4b5330', icon: '👩', description: 'Diverse and powerful women' },
+    { name: 'Cool Cats', contract: '0x1A92f7381B9F03921564a437210bB9396471050C', icon: '😺', description: 'Cool cat avatar collection' },
+    { name: 'VeeFriends', contract: '0xa3AEe8BcE55BEeA1951EF834B99f3Ac60d1ABeeB', icon: '🦄', description: 'Gary Vee\'s NFT collection' },
+    { name: 'Meebits', contract: '0x7Bd29408f11D2bFC23c34f18275bBf23bB716Bc7', icon: '🧊', description: '3D voxel characters by Larva Labs' },
+    { name: 'The Sandbox LAND', contract: '0x50f5474724e0Ee42D9a4e711ccFB275809Fd6d4a', icon: '🏝️', description: 'Virtual real estate NFTs' },
+    { name: 'Art Blocks Curated', contract: '0xa7d8d9ef8D8Ce8992Df33D8b8CF4Aebabd5bD270', icon: '🎨', description: 'Generative art collection' },
+    { name: 'Otherdeed for Otherside', contract: '0x34d85c9CDeB23FA97cb08333b511ac86E1C4E258', icon: '🗺️', description: 'Yuga Labs metaverse land' },
+    { name: 'Elemental', contract: '0x60E4d786628Fea6478F785A6d7e704777c86a7c6', icon: '⚡', description: 'Elemental NFT collection' }
+];
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded');
     console.log('Load NFT Button:', document.getElementById('loadNftBtn'));
     initializeEventListeners();
     initializeAIAssistant();
+    initializeCollections();
 });
 
 function initializeEventListeners() {
@@ -46,6 +67,11 @@ function initializeEventListeners() {
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
             document.getElementById(`${targetTab}-tab`).classList.remove('hidden');
+            
+            // Initialize collections when tab is opened
+            if (targetTab === 'collections') {
+                initializeCollections();
+            }
         });
     });
     
@@ -357,6 +383,95 @@ function displayWalletNFTs(nfts) {
         
         grid.appendChild(item);
     });
+}
+
+// Initialize collections tab
+function initializeCollections() {
+    displayCollections(POPULAR_COLLECTIONS);
+    
+    // Search functionality
+    const searchInput = document.getElementById('collectionSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = POPULAR_COLLECTIONS.filter(collection =>
+                collection.name.toLowerCase().includes(query) ||
+                collection.description.toLowerCase().includes(query)
+            );
+            displayCollections(filtered);
+        });
+    }
+    
+    // Load collection NFT button
+    const loadCollectionNftBtn = document.getElementById('loadCollectionNftBtn');
+    if (loadCollectionNftBtn) {
+        loadCollectionNftBtn.addEventListener('click', loadCollectionNFT);
+    }
+}
+
+function displayCollections(collections) {
+    const grid = document.getElementById('collectionsGrid');
+    grid.innerHTML = '';
+    
+    if (collections.length === 0) {
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #666;">No collections found matching your search.</p>';
+        return;
+    }
+    
+    collections.forEach(collection => {
+        const card = document.createElement('div');
+        card.className = 'collection-card';
+        card.innerHTML = `
+            <div class="collection-icon">${collection.icon}</div>
+            <div class="collection-name">${collection.name}</div>
+            <div class="collection-description">${collection.description}</div>
+        `;
+        
+        card.addEventListener('click', () => {
+            // Remove selection from all cards
+            document.querySelectorAll('.collection-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            
+            // Show the token ID input section
+            const section = document.getElementById('collectionNftsSection');
+            section.classList.remove('hidden');
+            document.getElementById('collectionNftsTitle').textContent = `Enter Token ID for ${collection.name}`;
+            
+            // Store selected collection
+            section.dataset.contract = collection.contract;
+        });
+        
+        grid.appendChild(card);
+    });
+}
+
+function loadCollectionNFT() {
+    const section = document.getElementById('collectionNftsSection');
+    const contract = section.dataset.contract;
+    const tokenId = document.getElementById('tokenIdSearch').value.trim();
+    
+    if (!contract) {
+        showError('Please select a collection first');
+        return;
+    }
+    
+    if (!tokenId) {
+        showError('Please enter a token ID');
+        return;
+    }
+    
+    // Populate manual entry fields
+    document.getElementById('contract').value = contract;
+    document.getElementById('tokenId').value = tokenId;
+    
+    // Switch to manual tab
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-tab="manual"]').classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+    document.getElementById('manual-tab').classList.remove('hidden');
+    
+    // Auto-load the NFT
+    setTimeout(() => loadNFT(), 300);
 }
 
 async function fetchNFTMetadata(contractAddress, tokenId, network) {

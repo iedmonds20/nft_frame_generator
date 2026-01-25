@@ -812,3 +812,52 @@ footer {
     color: var(--text-secondary);
     font-size: 0.7rem;
 }
+
+/* Collections Grid */
+.collections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.collection-card {
+    cursor: pointer;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    background: white;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.collection-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.collection-card.selected {
+    border-color: var(--primary-color);
+    border-width: 3px;
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.collection-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.collection-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.collection-description {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}

@@ -23,6 +23,7 @@
                 <div class="tab-navigation" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid #e0e0e0;">
                     <button class="tab-btn active" data-tab="manual" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid #6366f1; color: #6366f1; font-weight: 600; cursor: pointer;">Manual Entry</button>
                     <button class="tab-btn" data-tab="wallet" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; color: #666; font-weight: 600; cursor: pointer;">Browse Wallet</button>
+                    <button class="tab-btn" data-tab="collections" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; color: #666; font-weight: 600; cursor: pointer;">🔥 Popular Collections</button>
                 </div>
 
                 <!-- Manual Entry Tab -->
@@ -76,6 +77,37 @@
                     
                     <div id="walletNftsGrid" class="nft-grid hidden" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-top: 1.5rem; max-height: 500px; overflow-y: auto;">
                         <!-- NFTs will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Popular Collections Tab -->
+                <div id="collections-tab" class="tab-content hidden">
+                    <div class="form-group">
+                        <label for="collectionSearch">Search Collections</label>
+                        <input 
+                            type="text" 
+                            id="collectionSearch" 
+                            class="input-field" 
+                            placeholder="Search by name (e.g., Bored Ape, CryptoPunks...)"
+                        >
+                    </div>
+                    
+                    <div id="collectionsGrid" class="collections-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.5rem; max-height: 400px; overflow-y: auto;">
+                        <!-- Collections will be populated here -->
+                    </div>
+                    
+                    <div id="collectionNftsSection" class="hidden" style="margin-top: 2rem;">
+                        <h3 id="collectionNftsTitle" style="margin-bottom: 1rem;"></h3>
+                        <div class="form-group">
+                            <label for="tokenIdSearch">Enter Token ID</label>
+                            <input 
+                                type="text" 
+                                id="tokenIdSearch" 
+                                class="input-field" 
+                                placeholder="e.g., 1234"
+                            >
+                        </div>
+                        <button id="loadCollectionNftBtn" class="btn btn-primary">Load This NFT</button>
                     </div>
                 </div>
 
