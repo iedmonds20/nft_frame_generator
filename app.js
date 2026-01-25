@@ -654,6 +654,9 @@ async function generatePreview() {
     // Generate and draw QR code
     await drawQRCode(ctx, previewWidth, previewHeight, borderPixels);
     
+    // Draw authentic print signature if ownership proof exists
+    drawAuthenticSignature(ctx, previewWidth, previewHeight, borderPixels, previewDPI);
+    
     // Add subtle frame depth/shadow effect
     addFrameDepth(ctx, previewWidth, previewHeight, matteOffset);
     
@@ -811,6 +814,53 @@ function getFrameColor(material) {
     return colors[material] || '#ffd700';
 }
 
+// Draw authentic print signature with transaction hash when ownership proof exists
+function drawAuthenticSignature(ctx, canvasWidth, canvasHeight, borderPixels, dpi) {
+    if (!state.ownershipProof || !state.ownershipProof.signature) return;
+    
+    const signature = state.ownershipProof.signature;
+    const shortSig = `${signature.slice(0, 10)}...${signature.slice(-8)}`; // First 10 and last 8 chars
+    
+    // Position in bottom-right corner of mat board (above QR area)
+    const padding = borderPixels * 0.4;
+    const fontSize = Math.max(borderPixels * 0.12, 10); // Scale with DPI but minimum readable size
+    const lineHeight = fontSize * 1.4;
+    
+    // Calculate position (bottom-right, above QR code area)
+    const textX = canvasWidth - padding;
+    const textY = canvasHeight - (borderPixels * 1.8); // Above QR code area
+    
+    ctx.save();
+    
+    // Draw subtle background for legibility
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    const bgPadding = fontSize * 0.5;
+    const bgWidth = fontSize * 12; // Approximate width for text
+    const bgHeight = lineHeight * 2.5;
+    ctx.fillRect(textX - bgWidth - bgPadding, textY - lineHeight - bgPadding, 
+                 bgWidth + bgPadding * 2, bgHeight + bgPadding);
+    
+    // Add subtle border
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)';
+    ctx.lineWidth = Math.max(1, dpi / 150);
+    ctx.strokeRect(textX - bgWidth - bgPadding, textY - lineHeight - bgPadding, 
+                   bgWidth + bgPadding * 2, bgHeight + bgPadding);
+    
+    // Draw "AUTHENTIC PRINT" text
+    ctx.font = `bold ${fontSize}px "Arial", sans-serif`;
+    ctx.fillStyle = '#8b5cf6'; // Purple color
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('AUTHENTIC PRINT', textX - bgPadding, textY);
+    
+    // Draw transaction signature
+    ctx.font = `${fontSize * 0.7}px "Courier New", monospace`;
+    ctx.fillStyle = '#6b7280'; // Gray color
+    ctx.fillText(`TX: ${shortSig}`, textX - bgPadding, textY + lineHeight);
+    
+    ctx.restore();
+}
+
 async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
     // Create QR code URL with ownership proof if available
     const qrUrl = generateQRCodeUrl() || `${METADATA_STANDARDS[state.network].explorer}/token/${state.contractAddress}?a=${state.tokenId}`;
@@ -937,6 +987,9 @@ async function downloadFrame() {
     
     // Draw QR code at high resolution
     await drawQRCodeHighRes(ctx, printWidth, printHeight, borderPixels);
+    
+    // Draw authentic print signature if ownership proof exists
+    drawAuthenticSignature(ctx, printWidth, printHeight, borderPixels, printDPI);
     
     addFrameDepth(ctx, printWidth, printHeight, matteOffset);
     
