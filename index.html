@@ -17,38 +17,68 @@
         <main>
             <!-- Step 1: NFT Input -->
             <section class="card" id="nft-input-section">
-                <h2>1. Enter NFT Details</h2>
-                <div class="form-group">
-                    <label for="network">Network</label>
-                    <select id="network" class="input-field">
-                        <option value="ethereum">Ethereum (ERC-721)</option>
-                        <option value="polygon">Polygon (Coming Soon)</option>
-                        <option value="base">Base (Coming Soon)</option>
-                    </select>
-                </div>
+                <h2>1. Select Your NFT</h2>
                 
-                <div class="form-group">
-                    <label for="contract">Contract Address</label>
-                    <input 
-                        type="text" 
-                        id="contract" 
-                        class="input-field" 
-                        placeholder="0x..."
-                        pattern="0x[a-fA-F0-9]{40}"
-                    >
+                <!-- Tab Navigation -->
+                <div class="tab-navigation" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid #e0e0e0;">
+                    <button class="tab-btn active" data-tab="manual" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid #6366f1; color: #6366f1; font-weight: 600; cursor: pointer;">Manual Entry</button>
+                    <button class="tab-btn" data-tab="wallet" style="padding: 0.75rem 1.5rem; background: none; border: none; border-bottom: 3px solid transparent; color: #666; font-weight: 600; cursor: pointer;">Browse Wallet</button>
                 </div>
 
-                <div class="form-group">
-                    <label for="tokenId">Token ID</label>
-                    <input 
-                        type="text" 
-                        id="tokenId" 
-                        class="input-field" 
-                        placeholder="1"
-                    >
+                <!-- Manual Entry Tab -->
+                <div id="manual-tab" class="tab-content">
+                    <div class="form-group">
+                        <label for="network">Network</label>
+                        <select id="network" class="input-field">
+                            <option value="ethereum">Ethereum (ERC-721)</option>
+                            <option value="polygon">Polygon (Coming Soon)</option>
+                            <option value="base">Base (Coming Soon)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="contract">Contract Address</label>
+                        <input 
+                            type="text" 
+                            id="contract" 
+                            class="input-field" 
+                            placeholder="0x..."
+                            pattern="0x[a-fA-F0-9]{40}"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tokenId">Token ID</label>
+                        <input 
+                            type="text" 
+                            id="tokenId" 
+                            class="input-field" 
+                            placeholder="1"
+                        >
+                    </div>
+
+                    <button id="loadNftBtn" class="btn btn-primary">Load NFT</button>
                 </div>
 
-                <button id="loadNftBtn" class="btn btn-primary">Load NFT</button>
+                <!-- Wallet Browser Tab -->
+                <div id="wallet-tab" class="tab-content hidden">
+                    <div class="form-group">
+                        <label for="walletAddress">Wallet Address</label>
+                        <input 
+                            type="text" 
+                            id="walletAddress" 
+                            class="input-field" 
+                            placeholder="0x... (your Ethereum wallet address)"
+                            pattern="0x[a-fA-F0-9]{40}"
+                        >
+                    </div>
+                    <button id="loadWalletBtn" class="btn btn-primary">Load My NFTs</button>
+                    
+                    <div id="walletNftsGrid" class="nft-grid hidden" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-top: 1.5rem; max-height: 500px; overflow-y: auto;">
+                        <!-- NFTs will be populated here -->
+                    </div>
+                </div>
+
                 <div id="loading" class="loading hidden">Loading NFT...</div>
                 <div id="error" class="error hidden"></div>
             </section>

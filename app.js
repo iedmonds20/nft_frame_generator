@@ -34,7 +34,22 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeEventListeners() {
     console.log('Initializing event listeners...');
     
-    // Load NFT
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const targetTab = e.target.dataset.tab;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById(`${targetTab}-tab`).classList.remove('hidden');
+        });
+    });
+    
+    // Load NFT (manual entry)
     const loadBtn = document.getElementById('loadNftBtn');
     if (loadBtn) {
         console.log('Load NFT button found, attaching listener');
@@ -44,6 +59,12 @@ function initializeEventListeners() {
         });
     } else {
         console.error('Load NFT button not found!');
+    }
+    
+    // Load wallet NFTs
+    const loadWalletBtn = document.getElementById('loadWalletBtn');
+    if (loadWalletBtn) {
+        loadWalletBtn.addEventListener('click', loadWalletNFTs);
     }
     
     // Size selection
@@ -229,6 +250,113 @@ async function loadNFT() {
         showError(error.message || 'Failed to load NFT. Please check the contract address and token ID.');
         showLoading(false);
     }
+}
+
+// Load NFTs from wallet
+async function loadWalletNFTs() {
+    const walletAddress = document.getElementById('walletAddress').value.trim();
+    
+    // Validation
+    if (!walletAddress) {
+        showError('Please enter a wallet address');
+        return;
+    }
+    
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+        showError('Invalid wallet address format');
+        return;
+    }
+    
+    showLoading(true);
+    hideError();
+    
+    try {
+        console.log('Fetching NFTs for wallet:', walletAddress);
+        
+        // Use Alchemy's free public API endpoint
+        const alchemyUrl = `https://eth-mainnet.g.alchemy.com/nft/v2/demo/getNFTs?owner=${walletAddress}&withMetadata=true`;
+        
+        const response = await fetch(alchemyUrl);
+        if (!response.ok) {
+            throw new Error('Failed to fetch wallet NFTs');
+        }
+        
+        const data = await response.json();
+        console.log('Wallet NFTs:', data);
+        
+        if (!data.ownedNfts || data.ownedNfts.length === 0) {
+            showError('No NFTs found in this wallet');
+            showLoading(false);
+            return;
+        }
+        
+        displayWalletNFTs(data.ownedNfts);
+        showLoading(false);
+        
+    } catch (error) {
+        console.error('Error loading wallet NFTs:', error);
+        showError('Failed to load wallet NFTs. Please try again.');
+        showLoading(false);
+    }
+}
+
+function displayWalletNFTs(nfts) {
+    const grid = document.getElementById('walletNftsGrid');
+    grid.innerHTML = '';
+    grid.classList.remove('hidden');
+    
+    // Filter out NFTs without images and limit to first 50
+    const validNfts = nfts.filter(nft => {
+        const metadata = nft.metadata || {};
+        return metadata.image || nft.media?.[0]?.gateway;
+    }).slice(0, 50);
+    
+    if (validNfts.length === 0) {
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #666;">No NFTs with images found in this wallet.</p>';
+        return;
+    }
+    
+    validNfts.forEach(nft => {
+        const metadata = nft.metadata || {};
+        const imageUrl = metadata.image || nft.media?.[0]?.gateway || nft.media?.[0]?.raw;
+        let displayImage = imageUrl;
+        
+        // Handle IPFS URLs
+        if (displayImage && displayImage.startsWith('ipfs://')) {
+            displayImage = displayImage.replace('ipfs://', 'https://ipfs.io/ipfs/');
+        }
+        
+        const item = document.createElement('div');
+        item.className = 'nft-grid-item';
+        item.innerHTML = `
+            <img src="${displayImage}" alt="${metadata.name || 'NFT'}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27150%27 height=%27150%27%3E%3Crect fill=%27%23ddd%27 width=%27150%27 height=%27150%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 fill=%27%23999%27%3ENo Image%3C/text%3E%3C/svg%3E'">
+            <div class="nft-grid-item-info">
+                <div class="nft-grid-item-name">${metadata.name || 'Unnamed NFT'}</div>
+                <div class="nft-grid-item-id">ID: ${nft.id.tokenId}</div>
+            </div>
+        `;
+        
+        item.addEventListener('click', () => {
+            // Remove selection from all items
+            document.querySelectorAll('.nft-grid-item').forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            
+            // Populate the manual entry fields
+            document.getElementById('contract').value = nft.contract.address;
+            document.getElementById('tokenId').value = parseInt(nft.id.tokenId, 16) || nft.id.tokenId;
+            
+            // Switch to manual tab and trigger load
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-tab="manual"]').classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById('manual-tab').classList.remove('hidden');
+            
+            // Auto-load the NFT
+            setTimeout(() => loadNFT(), 300);
+        });
+        
+        grid.appendChild(item);
+    });
 }
 
 async function fetchNFTMetadata(contractAddress, tokenId, network) {
