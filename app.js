@@ -1416,38 +1416,48 @@ async function callHuggingFace(systemPrompt, userMessage) {
     
     console.log('Using Hugging Face with', aiConfig.apiKey ? 'custom token' : 'default token');
     
-    // Using Mistral-7B-Instruct model - fast, capable, and free
-    const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2/v1/chat/completions', {
+    // Using Mistral-7B-Instruct model via basic inference API (supports CORS)
+    // Format the prompt for Mistral's instruction format
+    const prompt = `<s>[INST] ${systemPrompt}\n\n${userMessage} [/INST]`;
+    
+    const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-            model: 'mistralai/Mistral-7B-Instruct-v0.2',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userMessage }
-            ],
-            max_tokens: 500,
-            temperature: 0.7,
-            stream: false
+            inputs: prompt,
+            parameters: {
+                max_new_tokens: 500,
+                temperature: 0.7,
+                return_full_text: false,
+                do_sample: true
+            }
         })
     });
     
     if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
         if (response.status === 503) {
-            throw new Error('Model is loading, please try again in a few seconds...');
+            throw new Error('Model is loading, please try again in 10-20 seconds...');
         }
         if (response.status === 401) {
             throw new Error('Invalid Hugging Face token. Please check your token at https://huggingface.co/settings/tokens');
         }
-        throw new Error(error.error || 'Hugging Face API error');
+        throw new Error(error.error || `Hugging Face API error (${response.status})`);
     }
     
     const data = await response.json();
-    return data.choices[0].message.content;
+    
+    // Handle response format - can be array or object
+    if (Array.isArray(data)) {
+        return data[0].generated_text;
+    } else if (data.generated_text) {
+        return data.generated_text;
+    } else {
+        throw new Error('Unexpected response format from Hugging Face');
+    }
 }
 
 async function callOpenAI(systemPrompt, userMessage) {
