@@ -941,24 +941,25 @@ async function downloadFrame() {
     addFrameDepth(ctx, printWidth, printHeight, matteOffset);
     
     // Crop to exclude outer frame - only export the print area (mat board + image + QR)
-    // The frame is from edge to matteOffset, so we crop from matteOffset inward
+    // The outer frame goes from edge to borderPixels inward
     const printCanvas = document.createElement('canvas');
     const printCtx = printCanvas.getContext('2d');
     
-    const printAreaWidth = printWidth - (matteOffset * 2);
-    const printAreaHeight = printHeight - (matteOffset * 2);
+    // Calculate print area size (everything except the outer decorative frame)
+    const printAreaWidth = printWidth - (borderPixels * 2);
+    const printAreaHeight = printHeight - (borderPixels * 2);
     
     printCanvas.width = printAreaWidth;
     printCanvas.height = printAreaHeight;
     
-    // Copy only the print area (excluding the decorative frame)
+    // Copy only the print area (crop from borderPixels inward, excluding the outer frame)
     printCtx.drawImage(
         canvas,
-        matteOffset, matteOffset, printAreaWidth, printAreaHeight,  // Source area (crop from original)
-        0, 0, printAreaWidth, printAreaHeight                        // Destination (full new canvas)
+        borderPixels, borderPixels, printAreaWidth, printAreaHeight,  // Source: skip outer frame border
+        0, 0, printAreaWidth, printAreaHeight                          // Destination: full new canvas
     );
     
-    // Download the cropped version (print only, no frame)
+    // Download the cropped version (print only, no decorative frame)
     printCanvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
