@@ -1262,8 +1262,8 @@ function updateApiConfigVisibility() {
         apiKeyGroup.classList.remove('hidden');
         localUrlGroup.classList.add('hidden');
         if (apiKeyOptional) apiKeyOptional.style.display = 'inline';
-        if (apiKeyInput) apiKeyInput.placeholder = '(Optional - works without key)';
-        if (apiKeyHelp) apiKeyHelp.innerHTML = '✓ Works without API key using public inference! Get your own <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--primary-color);">free token</a> for faster responses';
+        if (apiKeyInput) apiKeyInput.placeholder = 'hf_...';
+        if (apiKeyHelp) apiKeyHelp.innerHTML = '✓ <strong>100% Free!</strong> Get your token: <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--primary-color);">Sign up</a> → New token → Read access → Copy → Paste here! (Takes 30 seconds)';
     } else {
         apiKeyGroup.classList.remove('hidden');
         localUrlGroup.classList.add('hidden');
@@ -1286,16 +1286,20 @@ async function sendChatMessage() {
     }
     
     // Check if API is configured
-    // Only OpenAI and Anthropic require API keys
-    // Hugging Face and Local Ollama work without keys
+    // All providers except local Ollama require API keys
+    // (Hugging Face needs a token for browser CORS, but it's free!)
     console.log('Checking API config - Provider:', aiConfig.provider, 'Has Key:', !!aiConfig.apiKey);
     
-    const requiresApiKey = aiConfig.provider === 'openai' || aiConfig.provider === 'anthropic';
+    const requiresApiKey = aiConfig.provider !== 'local';
     console.log('Requires API key:', requiresApiKey);
     
     if (requiresApiKey && !aiConfig.apiKey) {
         console.error('API key required but not provided for provider:', aiConfig.provider);
-        addChatMessage('error', 'Please configure your API key first by clicking the "Configure API" button above.');
+        if (aiConfig.provider === 'huggingface') {
+            addChatMessage('error', '🔑 Please get your free Hugging Face token first (takes 30 seconds)! Click "Configure API" → Visit https://huggingface.co/settings/tokens → Create read token → Paste here. Completely free, no credit card needed!');
+        } else {
+            addChatMessage('error', 'Please configure your API key first by clicking the "Configure API" button above.');
+        }
         return;
     }
     
@@ -1403,29 +1407,22 @@ Be conversational and helpful. If a style like "elegant" or "modern" is requeste
 }
 
 async function callHuggingFace(systemPrompt, userMessage) {
-    // Use provided API key or demo mode
+    // Hugging Face requires authentication for browser CORS
+    // But tokens are FREE! Get one at: https://huggingface.co/settings/tokens
     const apiKey = aiConfig.apiKey;
     
-    if (!apiKey && !HF_DEMO_MODE) {
-        throw new Error('Please configure your Hugging Face API key or use demo mode');
+    if (!apiKey) {
+        throw new Error('Hugging Face token required. Get your free token at https://huggingface.co/settings/tokens (takes 30 seconds!)');
     }
     
     // Using Mistral-7B-Instruct model - fast, capable, and free
-    // In demo mode, we use the public inference API (slower, rate-limited)
-    const endpoint = apiKey 
-        ? 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2/v1/chat/completions'
-        : 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2';
-    
-    const headers = {
-        'Content-Type': 'application/json'
-    };
-    
-    if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-    
-    const body = apiKey 
-        ? JSON.stringify({
+    const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
             model: 'mistralai/Mistral-7B-Instruct-v0.2',
             messages: [
                 { role: 'system', content: systemPrompt },
@@ -1435,19 +1432,6 @@ async function callHuggingFace(systemPrompt, userMessage) {
             temperature: 0.7,
             stream: false
         })
-        : JSON.stringify({
-            inputs: `${systemPrompt}\n\nUser: ${userMessage}\n\nAssistant:`,
-            parameters: {
-                max_new_tokens: 500,
-                temperature: 0.7,
-                return_full_text: false
-            }
-        });
-    
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: headers,
-        body: body
     });
     
     if (!response.ok) {
@@ -1455,17 +1439,14 @@ async function callHuggingFace(systemPrompt, userMessage) {
         if (response.status === 503) {
             throw new Error('Model is loading, please try again in a few seconds...');
         }
+        if (response.status === 401) {
+            throw new Error('Invalid Hugging Face token. Please check your token at https://huggingface.co/settings/tokens');
+        }
         throw new Error(error.error || 'Hugging Face API error');
     }
     
     const data = await response.json();
-    
-    // Handle different response formats
-    if (apiKey) {
-        return data.choices[0].message.content;
-    } else {
-        return Array.isArray(data) ? data[0].generated_text : data.generated_text;
-    }
+    return data.choices[0].message.content;
 }
 
 async function callOpenAI(systemPrompt, userMessage) {
