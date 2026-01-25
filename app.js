@@ -1132,8 +1132,13 @@ const rateLimiter = {
     }
 };
 
+// Demo mode for Hugging Face - users should get their own free token
+// Get your free token at https://huggingface.co/settings/tokens
+// This demo uses a public model endpoint that may have rate limits
+const HF_DEMO_MODE = true;
+
 let aiConfig = {
-    provider: localStorage.getItem('ai_provider') || 'openai',
+    provider: localStorage.getItem('ai_provider') || 'huggingface',
     apiKey: decodeKey(localStorage.getItem('ai_api_key_enc')) || '',
     localUrl: localStorage.getItem('ai_local_url') || 'http://localhost:11434'
 };
@@ -1231,6 +1236,9 @@ function updateApiConfigVisibility() {
     const providerEl = document.getElementById('apiProvider');
     const apiKeyGroup = document.getElementById('apiKeyGroup');
     const localUrlGroup = document.getElementById('localUrlGroup');
+    const apiKeyOptional = document.getElementById('apiKeyOptional');
+    const apiKeyInput = document.getElementById('apiKey');
+    const apiKeyHelp = document.getElementById('apiKeyHelp');
     
     if (!providerEl || !apiKeyGroup || !localUrlGroup) return;
     
@@ -1239,9 +1247,19 @@ function updateApiConfigVisibility() {
     if (provider === 'local') {
         apiKeyGroup.classList.add('hidden');
         localUrlGroup.classList.remove('hidden');
+        if (apiKeyOptional) apiKeyOptional.style.display = 'none';
+    } else if (provider === 'huggingface') {
+        apiKeyGroup.classList.remove('hidden');
+        localUrlGroup.classList.add('hidden');
+        if (apiKeyOptional) apiKeyOptional.style.display = 'inline';
+        if (apiKeyInput) apiKeyInput.placeholder = '(Optional - works without key)';
+        if (apiKeyHelp) apiKeyHelp.innerHTML = '✓ Works without API key using public inference! Get your own <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--primary-color);">free token</a> for faster responses';
     } else {
         apiKeyGroup.classList.remove('hidden');
         localUrlGroup.classList.add('hidden');
+        if (apiKeyOptional) apiKeyOptional.style.display = 'none';
+        if (apiKeyInput) apiKeyInput.placeholder = 'sk-...';
+        if (apiKeyHelp) apiKeyHelp.textContent = 'Your key is stored locally and never sent to our servers';
     }
 }
 
@@ -1257,8 +1275,8 @@ async function sendChatMessage() {
         return;
     }
     
-    // Check if API is configured
-    if (aiConfig.provider !== 'local' && !aiConfig.apiKey) {
+    // Check if API is configured (Hugging Face has a free token, so skip check for it)
+    if (aiConfig.provider !== 'local' && aiConfig.provider !== 'huggingface' && !aiConfig.apiKey) {
         addChatMessage('error', 'Please configure your API key first by clicking the "Configure API" button above.');
         return;
     }
@@ -1353,12 +1371,80 @@ RESPONSE: I've updated your frame to...
 
 Be conversational and helpful. If a style like "elegant" or "modern" is requested, choose appropriate settings.`;
 
-    if (aiConfig.provider === 'openai') {
+    if (aiConfig.provider === 'huggingface') {
+        return await callHuggingFace(systemPrompt, userMessage);
+    } else if (aiConfig.provider === 'openai') {
         return await callOpenAI(systemPrompt, userMessage);
     } else if (aiConfig.provider === 'anthropic') {
         return await callAnthropic(systemPrompt, userMessage);
     } else if (aiConfig.provider === 'local') {
         return await callOllama(systemPrompt, userMessage);
+    }
+}
+
+async function callHuggingFace(systemPrompt, userMessage) {
+    // Use provided API key or demo mode
+    const apiKey = aiConfig.apiKey;
+    
+    if (!apiKey && !HF_DEMO_MODE) {
+        throw new Error('Please configure your Hugging Face API key or use demo mode');
+    }
+    
+    // Using Mistral-7B-Instruct model - fast, capable, and free
+    // In demo mode, we use the public inference API (slower, rate-limited)
+    const endpoint = apiKey 
+        ? 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2/v1/chat/completions'
+        : 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2';
+    
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    
+    if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+    
+    const body = apiKey 
+        ? JSON.stringify({
+            model: 'mistralai/Mistral-7B-Instruct-v0.2',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userMessage }
+            ],
+            max_tokens: 500,
+            temperature: 0.7,
+            stream: false
+        })
+        : JSON.stringify({
+            inputs: `${systemPrompt}\n\nUser: ${userMessage}\n\nAssistant:`,
+            parameters: {
+                max_new_tokens: 500,
+                temperature: 0.7,
+                return_full_text: false
+            }
+        });
+    
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: headers,
+        body: body
+    });
+    
+    if (!response.ok) {
+        const error = await response.json();
+        if (response.status === 503) {
+            throw new Error('Model is loading, please try again in a few seconds...');
+        }
+        throw new Error(error.error || 'Hugging Face API error');
+    }
+    
+    const data = await response.json();
+    
+    // Handle different response formats
+    if (apiKey) {
+        return data.choices[0].message.content;
+    } else {
+        return Array.isArray(data) ? data[0].generated_text : data.generated_text;
     }
 }
 
