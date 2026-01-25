@@ -940,12 +940,30 @@ async function downloadFrame() {
     
     addFrameDepth(ctx, printWidth, printHeight, matteOffset);
     
-    // Download
-    canvas.toBlob((blob) => {
+    // Crop to exclude outer frame - only export the print area (mat board + image + QR)
+    // The frame is from edge to matteOffset, so we crop from matteOffset inward
+    const printCanvas = document.createElement('canvas');
+    const printCtx = printCanvas.getContext('2d');
+    
+    const printAreaWidth = printWidth - (matteOffset * 2);
+    const printAreaHeight = printHeight - (matteOffset * 2);
+    
+    printCanvas.width = printAreaWidth;
+    printCanvas.height = printAreaHeight;
+    
+    // Copy only the print area (excluding the decorative frame)
+    printCtx.drawImage(
+        canvas,
+        matteOffset, matteOffset, printAreaWidth, printAreaHeight,  // Source area (crop from original)
+        0, 0, printAreaWidth, printAreaHeight                        // Destination (full new canvas)
+    );
+    
+    // Download the cropped version (print only, no frame)
+    printCanvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `nft-frame-${state.contractAddress.slice(0, 8)}-${state.tokenId}-${state.selectedSize.width}x${state.selectedSize.height}.png`;
+        a.download = `nft-print-${state.contractAddress.slice(0, 8)}-${state.tokenId}-${state.selectedSize.width}x${state.selectedSize.height}.png`;
         a.click();
         URL.revokeObjectURL(url);
     }, 'image/png');
