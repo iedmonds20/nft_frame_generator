@@ -1143,6 +1143,14 @@ let aiConfig = {
     localUrl: localStorage.getItem('ai_local_url') || 'http://localhost:11434'
 };
 
+// Ensure default provider is set if not already in localStorage
+if (!localStorage.getItem('ai_provider')) {
+    localStorage.setItem('ai_provider', 'huggingface');
+    console.log('Set default AI provider to Hugging Face');
+}
+
+console.log('AI Config initialized:', aiConfig.provider);
+
 function initializeAIAssistant() {
     // Configure API button
     const configureBtn = document.getElementById('configureApiBtn');
@@ -1218,6 +1226,8 @@ function saveApiConfig() {
     if (keyEl) aiConfig.apiKey = keyEl.value;
     if (urlEl) aiConfig.localUrl = urlEl.value;
     
+    console.log('Saving AI config - Provider:', aiConfig.provider, 'Has Key:', !!aiConfig.apiKey);
+    
     // Save to localStorage with encryption for API key
     localStorage.setItem('ai_api_key_enc', encodeKey(aiConfig.apiKey));
     localStorage.setItem('ai_local_url', aiConfig.localUrl);
@@ -1278,12 +1288,18 @@ async function sendChatMessage() {
     // Check if API is configured
     // Only OpenAI and Anthropic require API keys
     // Hugging Face and Local Ollama work without keys
+    console.log('Checking API config - Provider:', aiConfig.provider, 'Has Key:', !!aiConfig.apiKey);
+    
     const requiresApiKey = aiConfig.provider === 'openai' || aiConfig.provider === 'anthropic';
+    console.log('Requires API key:', requiresApiKey);
     
     if (requiresApiKey && !aiConfig.apiKey) {
+        console.error('API key required but not provided for provider:', aiConfig.provider);
         addChatMessage('error', 'Please configure your API key first by clicking the "Configure API" button above.');
         return;
     }
+    
+    console.log('API check passed, proceeding with AI request');
     
     // Record API call for rate limiting
     rateLimiter.recordCall();
