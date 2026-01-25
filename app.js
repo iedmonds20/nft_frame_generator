@@ -187,7 +187,13 @@ function initializeEventListeners() {
     // Ownership Proof
     const connectWalletBtn = document.getElementById('connectWalletBtn');
     if (connectWalletBtn) {
-        connectWalletBtn.addEventListener('click', connectWalletAndSign);
+        console.log('Connect wallet button found, adding event listener');
+        connectWalletBtn.addEventListener('click', () => {
+            console.log('Connect wallet button clicked!');
+            connectWalletAndSign();
+        });
+    } else {
+        console.error('Connect wallet button NOT found!');
     }
 }
 
@@ -1751,25 +1757,34 @@ function applyFrameChanges(changes) {
 // ==================== OWNERSHIP PROOF FUNCTIONALITY ====================
 
 async function connectWalletAndSign() {
+    console.log('=== connectWalletAndSign function called ===');
+    
     const btn = document.getElementById('connectWalletBtn');
     const originalText = btn.textContent;
     
     try {
         // Check if NFT is loaded
         if (!state.nftData) {
+            console.log('No NFT loaded yet');
             showError('Please load an NFT first before signing ownership proof');
             return;
         }
+        
+        console.log('NFT data exists, proceeding with wallet connection');
         
         btn.textContent = '⏳ Connecting wallet...';
         btn.disabled = true;
         
         // Check for any Ethereum provider (MetaMask, Coinbase Wallet, etc.)
         if (!window.ethereum) {
+            console.error('No Ethereum wallet found');
             throw new Error('No Ethereum wallet detected. Please install MetaMask, Coinbase Wallet, or another Web3 wallet.');
         }
         
+        console.log('Ethereum provider found:', window.ethereum);
+        
         // Request account access
+        console.log('Requesting accounts...');
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         const userAddress = accounts[0];
         
