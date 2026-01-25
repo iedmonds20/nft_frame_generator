@@ -1826,7 +1826,11 @@ async function connectWalletAndSign() {
         btn.disabled = false;
         
         // Show success message
-        addChatMessage('assistant', '✓ Ownership proof added! The QR code will now include verification data. Generate your frame to see the updated QR code with proof.');
+        addChatMessage('assistant', '✓ Ownership proof added! The authentic print signature is now visible on your frame with the transaction code.');
+        
+        // Automatically regenerate the preview to show the authentic signature
+        console.log('Regenerating preview with ownership proof...');
+        await generatePreview();
         
     } catch (error) {
         console.error('Wallet connection error:', error);
