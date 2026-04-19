@@ -895,10 +895,9 @@ async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
     });
     
     // Wait for QR code to generate
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const qrImg = qrContainer.querySelector('img');
-    if (qrImg) {
+    // Use the canvas element directly (synchronous, more reliable than img)
+    const qrCanvasEl = qrContainer.querySelector('canvas');
+    if (qrCanvasEl) {
         // Calculate QR position with more spacing (increased from 0.3 to 0.6 for better separation)
         let qrX, qrY;
         const qrPadding = borderPixels * 0.6; // Increased spacing from frame border and NFT
@@ -926,7 +925,7 @@ async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
                      qrSize + (qrBorderWidth * 2), qrSize + (qrBorderWidth * 2));
         
         // Draw QR code
-        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        ctx.drawImage(qrCanvasEl, qrX, qrY, qrSize, qrSize);
     }
     
     document.body.removeChild(qrContainer);
@@ -946,8 +945,11 @@ function addFrameDepth(ctx, width, height, offset) {
 async function downloadFrame() {
     if (!state.nftData) return;
     
-    // Create high-resolution canvas (300 DPI for printing)
-    const printDPI = 300;
+    // Detect mobile/iOS to avoid memory exhaustion with full 300 DPI canvas
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const printDPI = isMobile ? 150 : 300;
+    
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
@@ -1019,14 +1021,28 @@ async function downloadFrame() {
     );
     
     // Download the cropped version (print only, no decorative frame)
-    printCanvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `nft-print-${state.contractAddress.slice(0, 8)}-${state.tokenId}-${state.selectedSize.width}x${state.selectedSize.height}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }, 'image/png');
+    const filename = `nft-print-${state.contractAddress.slice(0, 8)}-${state.tokenId}-${state.selectedSize.width}x${state.selectedSize.height}.png`;
+    
+    if (isIOS) {
+        // iOS Safari does not support <a download> or createObjectURL for saving files.
+        // Open the image in a new tab so the user can long-press to save.
+        const dataUrl = printCanvas.toDataURL('image/png');
+        const win = window.open('', '_blank');
+        if (win) {
+            win.document.write(`<!DOCTYPE html><html><head><title>Save Image</title></head><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;padding:10px"><p style="color:#fff;font-family:sans-serif;text-align:center">Long-press the image below and choose "Save to Photos" to download.</p><img src="${dataUrl}" style="max-width:100%;height:auto"></body></html>`);
+        }
+    } else {
+        printCanvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+    }
 }
 
 async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
@@ -1053,10 +1069,9 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
         correctLevel: QRCode.CorrectLevel.H
     });
     
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const qrImg = qrContainer.querySelector('img');
-    if (qrImg) {
+    // Use the canvas element directly (synchronous, more reliable than img)
+    const qrCanvasEl = qrContainer.querySelector('canvas');
+    if (qrCanvasEl) {
         let qrX, qrY;
         const qrPadding = borderPixels * 0.6; // Increased spacing to match preview
         
@@ -1081,7 +1096,7 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
         ctx.fillRect(qrX - qrBorderWidth, qrY - qrBorderWidth, 
                      qrSize + (qrBorderWidth * 2), qrSize + (qrBorderWidth * 2));
         
-        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        ctx.drawImage(qrCanvasEl, qrX, qrY, qrSize, qrSize);
     }
     
     document.body.removeChild(qrContainer);
