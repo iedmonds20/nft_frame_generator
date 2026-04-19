@@ -678,9 +678,6 @@ async function generatePreview() {
     // Generate and draw QR code
     await drawQRCode(ctx, previewWidth, previewHeight, borderPixels);
     
-    // Draw authentic print signature if ownership proof exists
-    drawAuthenticSignature(ctx, previewWidth, previewHeight, borderPixels, previewDPI);
-    
     // Add subtle frame depth/shadow effect
     addFrameDepth(ctx, previewWidth, previewHeight, matteOffset);
     
@@ -1014,9 +1011,6 @@ async function downloadFrame() {
     
     // Draw QR code at high resolution
     await drawQRCodeHighRes(ctx, printWidth, printHeight, borderPixels);
-    
-    // Draw authentic print signature if ownership proof exists
-    drawAuthenticSignature(ctx, printWidth, printHeight, borderPixels, printDPI);
     
     addFrameDepth(ctx, printWidth, printHeight, matteOffset);
     
