@@ -1,3 +1,7 @@
+// WalletConnect Project ID — get a free one at https://cloud.walletconnect.com
+// Replace the string below with your own Project ID to enable WalletConnect support.
+const WALLETCONNECT_PROJECT_ID = '';
+
 // App State
 const state = {
     nftData: null,
@@ -51,6 +55,20 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
     initializeAIAssistant();
     initializeCollections();
+
+    // Close modals on Escape key or backdrop click
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeWalletModal();
+            closeWcQrModal();
+        }
+    });
+    document.getElementById('walletPickerModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeWalletModal();
+    });
+    document.getElementById('wcQrModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeWcQrModal();
+    });
 });
 
 function initializeEventListeners() {
@@ -1774,94 +1792,209 @@ function applyFrameChanges(changes) {
 
 async function connectWalletAndSign() {
     console.log('=== connectWalletAndSign function called ===');
-    
+
+    if (!state.nftData) {
+        showError('Please load an NFT first before signing ownership proof');
+        return;
+    }
+
+    showWalletModal();
+}
+
+// ---- Wallet picker modal helpers ----
+
+function showWalletModal() {
+    const modal = document.getElementById('walletPickerModal');
+    modal.style.display = 'flex';
+}
+
+function closeWalletModal() {
+    document.getElementById('walletPickerModal').style.display = 'none';
+}
+
+function closeWcQrModal() {
+    document.getElementById('wcQrModal').style.display = 'none';
+    // Cancel any pending WalletConnect session
+    if (window._wcProvider) {
+        try { window._wcProvider.disconnect(); } catch (_) {}
+        window._wcProvider = null;
+    }
+}
+
+async function walletPickerSelect(option) {
+    closeWalletModal();
     const btn = document.getElementById('connectWalletBtn');
     const originalText = btn.textContent;
-    
+    btn.disabled = true;
+
     try {
-        // Check if NFT is loaded
-        if (!state.nftData) {
-            console.log('No NFT loaded yet');
-            showError('Please load an NFT first before signing ownership proof');
-            return;
+        switch (option) {
+            case 'browser':
+                await connectWithBrowserWallet(btn, originalText);
+                break;
+            case 'coinbase':
+                await connectWithCoinbaseWallet(btn, originalText);
+                break;
+            case 'walletconnect':
+                await connectWithWalletConnect(btn, originalText);
+                break;
         }
-        
-        console.log('NFT data exists, proceeding with wallet connection');
-        
-        btn.textContent = '⏳ Connecting wallet...';
-        btn.disabled = true;
-        
-        // Check for any Ethereum provider (MetaMask, Coinbase Wallet, etc.)
-        if (!window.ethereum) {
-            console.error('No Ethereum wallet found');
-            throw new Error('No Ethereum wallet detected. Please install MetaMask, Coinbase Wallet, or another Web3 wallet.');
-        }
-        
-        console.log('Ethereum provider found:', window.ethereum);
-        
-        // Request account access
-        console.log('Requesting accounts...');
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const userAddress = accounts[0];
-        
-        console.log('Connected wallet:', userAddress);
-        
-        btn.textContent = '✍️ Waiting for signature...';
-        
-        // Create message to sign
-        const timestamp = new Date().toISOString();
-        const message = `I own this NFT:\n\nContract: ${state.contractAddress}\nToken ID: ${state.tokenId}\nNFT: ${state.nftData.name || 'Unnamed NFT'}\n\nTimestamp: ${timestamp}\n\nThis signature proves ownership at the time of framing.\nNo funds or permissions are granted by signing.`;
-        
-        // Request signature (works with any wallet)
-        const signature = await window.ethereum.request({
-            method: 'personal_sign',
-            params: [message, userAddress]
-        });
-        
-        console.log('Signature obtained');
-        
-        // Store proof in state
-        state.ownershipProof = {
-            address: userAddress,
-            signature: signature,
-            timestamp: timestamp,
-            message: message,
-            nftContract: state.contractAddress,
-            nftTokenId: state.tokenId,
-            nftName: state.nftData.name || 'Unnamed NFT'
-        };
-        
-        // Update UI
-        const statusDiv = document.getElementById('ownershipProofStatus');
-        const detailsSpan = document.getElementById('proofDetails');
-        
-        statusDiv.classList.remove('hidden');
-        detailsSpan.textContent = `Signed by: ${userAddress.substring(0, 6)}...${userAddress.substring(38)} on ${new Date(timestamp).toLocaleString()}`;
-        
-        btn.textContent = '✅ Proof Added - Click to Re-sign';
-        btn.disabled = false;
-        
-        // Show success message
-        addChatMessage('assistant', '✓ Ownership proof added! The authentic print signature is now visible on your frame with the transaction code.');
-        
-        // Automatically regenerate the preview to show the authentic signature
-        console.log('Regenerating preview with ownership proof...');
-        await generatePreview();
-        
     } catch (error) {
         console.error('Wallet connection error:', error);
-        
-        if (error.code === 4001) {
-            showError('Signature rejected. Please approve the signature to add ownership proof.');
-        } else if (error.message.includes('No Ethereum wallet')) {
-            showError(error.message);
+        if (error.code === 4001 || error.message?.includes('User rejected')) {
+            showError('Signature rejected. Please approve the signature request in your wallet.');
         } else {
             showError('Failed to connect wallet: ' + error.message);
         }
-        
         btn.textContent = originalText;
         btn.disabled = false;
     }
+}
+
+// ---- Browser wallet (injected window.ethereum) ----
+
+async function connectWithBrowserWallet(btn, originalText) {
+    if (!window.ethereum) {
+        throw new Error('No Ethereum wallet detected. Please install MetaMask or another Web3 wallet extension.');
+    }
+    btn.textContent = '⏳ Connecting wallet…';
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    await doSignMessage(window.ethereum, accounts[0], btn, originalText);
+}
+
+// ---- Coinbase / Base Wallet SDK ----
+
+async function connectWithCoinbaseWallet(btn, originalText) {
+    if (typeof CoinbaseWalletSDK === 'undefined') {
+        throw new Error('Coinbase Wallet SDK failed to load. Please refresh the page and try again.');
+    }
+    btn.textContent = '⏳ Opening Coinbase Wallet…';
+
+    const sdk = new CoinbaseWalletSDK({
+        appName: 'NFT Frame Studio',
+        appLogoUrl: window.location.origin + '/favicon.ico'
+    });
+    const ethereum = sdk.makeWeb3Provider('https://eth.llamarpc.com', 1);
+    const accounts = await ethereum.enable();
+    await doSignMessage(ethereum, accounts[0], btn, originalText);
+}
+
+// ---- WalletConnect v2 ----
+
+async function connectWithWalletConnect(btn, originalText) {
+    const WCProvider =
+        window.WalletConnectEthereumProvider ||
+        (window.WalletConnectProvider && window.WalletConnectProvider.default) ||
+        window.EthereumProvider;
+
+    if (!WCProvider) {
+        throw new Error('WalletConnect library failed to load. Please refresh the page and try again.');
+    }
+
+    if (!WALLETCONNECT_PROJECT_ID) {
+        showError(
+            'WalletConnect requires a free Project ID. ' +
+            'Get one at cloud.walletconnect.com and set WALLETCONNECT_PROJECT_ID in app.js.'
+        );
+        btn.disabled = false;
+        return;
+    }
+
+    btn.textContent = '⏳ Preparing WalletConnect…';
+
+    const provider = await WCProvider.init({
+        projectId: WALLETCONNECT_PROJECT_ID,
+        chains: [1],
+        showQrModal: false,
+        metadata: {
+            name: 'NFT Frame Studio',
+            description: 'Create custom frames for your NFTs',
+            url: window.location.origin,
+            icons: []
+        }
+    });
+
+    window._wcProvider = provider;
+
+    // Show QR modal when URI is available
+    provider.on('display_uri', (uri) => {
+        showWcQrCode(uri, 'Connect with WalletConnect');
+    });
+
+    provider.on('connect', () => {
+        document.getElementById('wcQrStatus').textContent = '✓ Connected! Check your wallet to approve the signature…';
+    });
+
+    btn.textContent = '⏳ Waiting for wallet…';
+    await provider.connect();
+
+    closeWcQrModal();
+
+    const accounts = provider.accounts;
+    if (!accounts || accounts.length === 0) throw new Error('No accounts returned from WalletConnect.');
+
+    await doSignMessage(provider, accounts[0], btn, originalText);
+    window._wcProvider = null;
+}
+
+// ---- QR display helper for WalletConnect URI ----
+
+function showWcQrCode(uri, title) {
+    const modal = document.getElementById('wcQrModal');
+    const container = document.getElementById('wcQrContainer');
+    document.getElementById('wcQrTitle').textContent = title;
+    document.getElementById('wcQrStatus').textContent = 'Waiting for wallet to connect…';
+    container.innerHTML = '';
+
+    new QRCode(container, {
+        text: uri,
+        width: 240,
+        height: 240,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+    });
+
+    modal.style.display = 'flex';
+}
+
+// ---- Shared signing logic ----
+
+async function doSignMessage(provider, userAddress, btn, originalText) {
+    btn.textContent = '✍️ Waiting for signature…';
+
+    const timestamp = new Date().toISOString();
+    const message =
+        `I own this NFT:\n\nContract: ${state.contractAddress}\nToken ID: ${state.tokenId}\n` +
+        `NFT: ${state.nftData.name || 'Unnamed NFT'}\n\nTimestamp: ${timestamp}\n\n` +
+        `This signature proves ownership at the time of framing.\nNo funds or permissions are granted by signing.`;
+
+    const signature = await provider.request({
+        method: 'personal_sign',
+        params: [message, userAddress]
+    });
+
+    state.ownershipProof = {
+        address: userAddress,
+        signature,
+        timestamp,
+        message,
+        nftContract: state.contractAddress,
+        nftTokenId: state.tokenId,
+        nftName: state.nftData.name || 'Unnamed NFT'
+    };
+
+    const statusDiv = document.getElementById('ownershipProofStatus');
+    const detailsSpan = document.getElementById('proofDetails');
+    statusDiv.classList.remove('hidden');
+    detailsSpan.textContent =
+        `Signed by: ${userAddress.substring(0, 6)}…${userAddress.substring(38)} on ${new Date(timestamp).toLocaleString()}`;
+
+    btn.textContent = '✅ Proof Added — Click to Re-sign';
+    btn.disabled = false;
+
+    addChatMessage('assistant', '✓ Ownership proof added! The authentic print signature is now visible on your frame with the transaction code.');
+    await generatePreview();
 }
 
 // Update QR code generation to include ownership proof

@@ -475,8 +475,61 @@
         </footer>
     </div>
 
+    <!-- Wallet Picker Modal -->
+    <div id="walletPickerModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:16px; padding:2rem; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
+            <button onclick="closeWalletModal()" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.4rem; cursor:pointer; color:#666;">✕</button>
+            <h3 style="margin:0 0 0.4rem; font-size:1.2rem;">Connect Wallet</h3>
+            <p style="margin:0 0 1.5rem; color:#666; font-size:0.875rem;">Choose how to connect and sign your ownership proof</p>
+
+            <!-- Browser wallet -->
+            <button onclick="walletPickerSelect('browser')" style="display:flex; align-items:center; gap:1rem; width:100%; padding:1rem 1.2rem; margin-bottom:0.75rem; border:2px solid #e5e7eb; border-radius:12px; background:#fff; cursor:pointer; text-align:left; transition:border-color 0.2s;">
+                <span style="font-size:1.8rem;">🦊</span>
+                <div>
+                    <div style="font-weight:600; font-size:0.95rem;">Browser Wallet</div>
+                    <div style="color:#666; font-size:0.8rem;">MetaMask, Brave Wallet, injected wallet</div>
+                </div>
+            </button>
+
+            <!-- Coinbase / Base Wallet -->
+            <button onclick="walletPickerSelect('coinbase')" style="display:flex; align-items:center; gap:1rem; width:100%; padding:1rem 1.2rem; margin-bottom:0.75rem; border:2px solid #e5e7eb; border-radius:12px; background:#fff; cursor:pointer; text-align:left; transition:border-color 0.2s;">
+                <span style="font-size:1.8rem;">🔵</span>
+                <div>
+                    <div style="font-weight:600; font-size:0.95rem;">Coinbase / Base Wallet</div>
+                    <div style="color:#666; font-size:0.8rem;">Scan QR with the Base or Coinbase Wallet app</div>
+                </div>
+            </button>
+
+            <!-- WalletConnect -->
+            <button onclick="walletPickerSelect('walletconnect')" style="display:flex; align-items:center; gap:1rem; width:100%; padding:1rem 1.2rem; margin-bottom:0.75rem; border:2px solid #e5e7eb; border-radius:12px; background:#fff; cursor:pointer; text-align:left; transition:border-color 0.2s;">
+                <span style="font-size:1.8rem;">🔗</span>
+                <div>
+                    <div style="font-weight:600; font-size:0.95rem;">WalletConnect</div>
+                    <div style="color:#666; font-size:0.8rem;">MetaMask Mobile, Rainbow, Trust &amp; more</div>
+                </div>
+            </button>
+
+            <p style="margin:0.5rem 0 0; font-size:0.75rem; color:#9ca3af; text-align:center;">No funds or permissions are granted by signing</p>
+        </div>
+    </div>
+
+    <!-- WalletConnect QR Modal -->
+    <div id="wcQrModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:10000; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:16px; padding:2rem; max-width:360px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
+            <button onclick="closeWcQrModal()" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.4rem; cursor:pointer; color:#666;">✕</button>
+            <h3 style="margin:0 0 0.5rem; font-size:1.1rem;" id="wcQrTitle">Connect with WalletConnect</h3>
+            <p style="margin:0 0 1rem; color:#666; font-size:0.825rem;">Scan this QR code with your mobile wallet</p>
+            <div id="wcQrContainer" style="display:flex; justify-content:center; margin-bottom:1rem;"></div>
+            <p style="margin:0; font-size:0.75rem; color:#9ca3af;" id="wcQrStatus">Waiting for wallet to connect…</p>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <!-- Coinbase / Base Wallet SDK (QR-based mobile pairing, no project ID required) -->
+    <script src="https://cdn.jsdelivr.net/npm/@coinbase/wallet-sdk@3.9.3/dist/CoinbaseWalletSDK.js"></script>
+    <!-- WalletConnect Ethereum Provider v2 (any WalletConnect-compatible mobile wallet) -->
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.13.4/dist/index.umd.js"></script>
     <script>
         // Wait for ethers.js to load before loading app.js
         window.addEventListener('load', function() {
