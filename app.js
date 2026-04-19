@@ -871,11 +871,12 @@ async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
     // Create QR code URL with ownership proof if available
     const qrUrl = generateQRCodeUrl() || `${METADATA_STANDARDS[state.network].explorer}/token/${state.contractAddress}?a=${state.tokenId}`;
     
-    // QR code size based on selection
+    // QR code size based on selection - relative to canvas width so it stays
+    // proportional regardless of border thickness
     const qrSizes = {
-        small: borderPixels * 0.8,
-        medium: borderPixels * 1.2,
-        large: borderPixels * 1.6
+        small: canvasWidth * 0.1,
+        medium: canvasWidth * 0.15,
+        large: canvasWidth * 0.22
     };
     const qrSize = qrSizes[state.qrSize];
     
@@ -1050,9 +1051,9 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
     const qrUrl = `${explorer}/token/${state.contractAddress}?a=${state.tokenId}`;
     
     const qrSizes = {
-        small: borderPixels * 0.8,
-        medium: borderPixels * 1.2,
-        large: borderPixels * 1.6
+        small: canvasWidth * 0.1,
+        medium: canvasWidth * 0.15,
+        large: canvasWidth * 0.22
     };
     const qrSize = qrSizes[state.qrSize];
     
