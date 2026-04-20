@@ -652,8 +652,10 @@ async function generatePreview() {
     ctx.fillRect(matteOffset, matteOffset, previewWidth - (matteOffset * 2), previewHeight - (matteOffset * 2));
     
     // Calculate image dimensions (maintaining aspect ratio)
+    // Reserve canvasWidth*0.27 at the bottom of the mat board for the QR code
+    const qrReservedHeight = previewWidth * 0.27;
     const imageAreaWidth = previewWidth - (borderPixels * 2);
-    const imageAreaHeight = previewHeight - (borderPixels * 2) - (borderPixels * 0.5); // Leave space for QR
+    const imageAreaHeight = previewHeight - (borderPixels * 2) - qrReservedHeight;
     
     const imgAspect = img.width / img.height;
     const areaAspect = imageAreaWidth / imageAreaHeight;
@@ -914,27 +916,12 @@ async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
     const qrCanvasEl = qrContainer.querySelector('canvas');
     if (qrCanvasEl) {
         let qrX, qrY;
-        // Center the QR vertically in the bottom gap with a 5% buffer from the frame edge.
-        const frameBuffer = canvasHeight * 0.05;
-        const qrY_center = canvasHeight - frameBuffer - qrSize / 2;
-        qrY = qrY_center;
+        // Center QR in the reserved zone at the bottom of the mat board
+        const qrReserved = canvasWidth * 0.27;
+        const qrZoneTop = canvasHeight - borderPixels - qrReserved;
+        const qrZoneBottom = canvasHeight - borderPixels;
+        qrY = (qrZoneTop + qrZoneBottom) / 2 - qrSize / 2;
         const sideMargin = Math.max(borderPixels * 0.6, canvasWidth * 0.05);
-        
-        switch (state.qrPosition) {
-            case 'bottom-left':
-                qrX = sideMargin;
-                break;
-            case 'bottom-right':
-                qrX = canvasWidth - qrSize - sideMargin;
-                break;
-            case 'bottom-center':
-            default:
-                qrX = (canvasWidth - qrSize) / 2;
-                break;
-        }
-        
-        // Draw customizable border around QR
-        const qrBorderWidth = qrSize * state.qrBorderWidth;
         ctx.fillStyle = state.qrBorderColor;
         ctx.fillRect(qrX - qrBorderWidth, qrY - qrBorderWidth, 
                      qrSize + (qrBorderWidth * 2), qrSize + (qrBorderWidth * 2));
@@ -987,7 +974,8 @@ async function downloadFrame() {
     ctx.fillRect(matteOffset, matteOffset, printWidth - (matteOffset * 2), printHeight - (matteOffset * 2));
     
     const imageAreaWidth = printWidth - (borderPixels * 2);
-    const imageAreaHeight = printHeight - (borderPixels * 2) - (borderPixels * 0.5);
+    const qrReservedHeight = printWidth * 0.27;
+    const imageAreaHeight = printHeight - (borderPixels * 2) - qrReservedHeight;
     
     const imgAspect = img.width / img.height;
     const areaAspect = imageAreaWidth / imageAreaHeight;
@@ -1013,20 +1001,32 @@ async function downloadFrame() {
     
     addFrameDepth(ctx, printWidth, printHeight, matteOffset);
     
-    // Export the full canvas at the exact selected size so it fits the chosen frame.
-    // (e.g. 24"x36" selection → 7200x10800px at 300 DPI, fits a 24"x36" frame perfectly)
+    // Crop outer decorative frame — export only the mat board area (image + QR with its border).
+    // The physical Staples/print-service frame goes around this printed piece.
+    const printCanvas = document.createElement('canvas');
+    const printCtx = printCanvas.getContext('2d');
+    const printAreaWidth = printWidth - (borderPixels * 2);
+    const printAreaHeight = printHeight - (borderPixels * 2);
+    printCanvas.width = printAreaWidth;
+    printCanvas.height = printAreaHeight;
+    printCtx.drawImage(
+        canvas,
+        borderPixels, borderPixels, printAreaWidth, printAreaHeight,
+        0, 0, printAreaWidth, printAreaHeight
+    );
+    
     const filename = `nft-print-${state.contractAddress.slice(0, 8)}-${state.tokenId}-${state.selectedSize.width}x${state.selectedSize.height}.png`;
     
     if (isIOS) {
         // iOS Safari does not support <a download> or createObjectURL for saving files.
         // Open the image in a new tab so the user can long-press to save.
-        const dataUrl = canvas.toDataURL('image/png');
+        const dataUrl = printCanvas.toDataURL('image/png');
         const win = window.open('', '_blank');
         if (win) {
             win.document.write(`<!DOCTYPE html><html><head><title>Save Image</title></head><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;padding:10px"><p style="color:#fff;font-family:sans-serif;text-align:center">Long-press the image below and choose "Save to Photos" to download.</p><img src="${dataUrl}" style="max-width:100%;height:auto"></body></html>`);
         }
     } else {
-        canvas.toBlob((blob) => {
+        printCanvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1067,10 +1067,11 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
     const qrCanvasEl = qrContainer.querySelector('canvas');
     if (qrCanvasEl) {
         let qrX, qrY;
-        // Center the QR vertically in the bottom gap with a 5% buffer from the frame edge.
-        const frameBuffer = canvasHeight * 0.05;
-        const qrY_center = canvasHeight - frameBuffer - qrSize / 2;
-        qrY = qrY_center;
+        // Center QR in the reserved zone at the bottom of the mat board
+        const qrReserved = canvasWidth * 0.27;
+        const qrZoneTop = canvasHeight - borderPixels - qrReserved;
+        const qrZoneBottom = canvasHeight - borderPixels;
+        qrY = (qrZoneTop + qrZoneBottom) / 2 - qrSize / 2;
         const sideMargin = Math.max(borderPixels * 0.6, canvasWidth * 0.05);
         
         switch (state.qrPosition) {
