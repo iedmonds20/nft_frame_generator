@@ -741,7 +741,7 @@ function updatePricingEstimates() {
 }
 
 function drawEnhancedFrame(ctx, width, height, borderSize, material) {
-    const baseColor = getFrameColor(material);
+    const baseColor = material === 'match-mat' ? state.matColor : getFrameColor(material);
     
     // Draw base frame
     ctx.fillStyle = baseColor;
