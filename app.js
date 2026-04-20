@@ -910,27 +910,26 @@ async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
         correctLevel: QRCode.CorrectLevel.H
     });
     
-    // Wait for QR code to generate
     // Use the canvas element directly (synchronous, more reliable than img)
     const qrCanvasEl = qrContainer.querySelector('canvas');
     if (qrCanvasEl) {
-        // Calculate QR position with more spacing (increased from 0.3 to 0.6 for better separation)
         let qrX, qrY;
-        const qrPadding = borderPixels * 0.6; // Increased spacing from frame border and NFT
+        // Center the QR vertically in the bottom gap (image area leaves borderPixels*1.5 at the bottom).
+        // bottomGapCenter = canvasHeight - borderPixels * 0.75
+        const qrY_center = canvasHeight - borderPixels * 0.75 - qrSize / 2;
+        qrY = qrY_center;
+        const sideMargin = borderPixels * 0.6;
         
         switch (state.qrPosition) {
             case 'bottom-left':
-                qrX = qrPadding;
-                qrY = canvasHeight - qrSize - qrPadding;
+                qrX = sideMargin;
                 break;
             case 'bottom-right':
-                qrX = canvasWidth - qrSize - qrPadding;
-                qrY = canvasHeight - qrSize - qrPadding;
+                qrX = canvasWidth - qrSize - sideMargin;
                 break;
             case 'bottom-center':
             default:
                 qrX = (canvasWidth - qrSize) / 2;
-                qrY = canvasHeight - qrSize - qrPadding;
                 break;
         }
         
@@ -1068,21 +1067,21 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
     const qrCanvasEl = qrContainer.querySelector('canvas');
     if (qrCanvasEl) {
         let qrX, qrY;
-        const qrPadding = borderPixels * 0.6; // Increased spacing to match preview
+        // Center the QR vertically in the bottom gap (same formula as preview)
+        const qrY_center = canvasHeight - borderPixels * 0.75 - qrSize / 2;
+        qrY = qrY_center;
+        const sideMargin = borderPixels * 0.6;
         
         switch (state.qrPosition) {
             case 'bottom-left':
-                qrX = qrPadding;
-                qrY = canvasHeight - qrSize - qrPadding;
+                qrX = sideMargin;
                 break;
             case 'bottom-right':
-                qrX = canvasWidth - qrSize - qrPadding;
-                qrY = canvasHeight - qrSize - qrPadding;
+                qrX = canvasWidth - qrSize - sideMargin;
                 break;
             case 'bottom-center':
             default:
                 qrX = (canvasWidth - qrSize) / 2;
-                qrY = canvasHeight - qrSize - qrPadding;
                 break;
         }
         
