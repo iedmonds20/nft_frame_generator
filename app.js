@@ -950,7 +950,7 @@ async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
         
         // Draw customizable border around QR
         const qrBorderWidth = qrSize * state.qrBorderWidth;
-        ctx.fillStyle = state.qrBorderColor;
+        ctx.fillStyle = state.qrBorderColor === 'match-mat' ? state.matColor : state.qrBorderColor;
         ctx.fillRect(qrX - qrBorderWidth, qrY - qrBorderWidth, 
                      qrSize + (qrBorderWidth * 2), qrSize + (qrBorderWidth * 2));
         
@@ -1114,7 +1114,7 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
         }
         
         const qrBorderWidth = qrSize * state.qrBorderWidth;
-        ctx.fillStyle = state.qrBorderColor;
+        ctx.fillStyle = state.qrBorderColor === 'match-mat' ? state.matColor : state.qrBorderColor;
         ctx.fillRect(qrX - qrBorderWidth, qrY - qrBorderWidth, 
                      qrSize + (qrBorderWidth * 2), qrSize + (qrBorderWidth * 2));
         
