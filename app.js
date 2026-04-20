@@ -993,8 +993,10 @@ async function downloadFrame() {
     // Load NFT image
     const img = await loadImage(state.nftData.image);
     
-    // Draw frame with selected material
-    drawEnhancedFrame(ctx, printWidth, printHeight, borderPixels, state.frameMaterial);
+    // Draw frame as flat solid color (no bevel/shadow — clean square edges for print services)
+    const frameColor = state.frameMaterial === 'match-mat' ? state.matColor : getFrameColor(state.frameMaterial);
+    ctx.fillStyle = frameColor;
+    ctx.fillRect(0, 0, printWidth, printHeight);
 
     const matteOffset = borderPixels * 0.2;
     ctx.fillStyle = state.matColor;
@@ -1022,9 +1024,6 @@ async function downloadFrame() {
     }
     
     ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-    
-    // Add frame depth effect
-    addFrameDepth(ctx, printWidth, printHeight, matteOffset);
     
     // Draw QR code at high resolution
     await drawQRCodeHighRes(ctx, printWidth, printHeight, borderPixels);
