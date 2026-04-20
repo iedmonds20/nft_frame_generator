@@ -922,6 +922,22 @@ async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
         const qrZoneBottom = canvasHeight - borderPixels;
         qrY = (qrZoneTop + qrZoneBottom) / 2 - qrSize / 2;
         const sideMargin = Math.max(borderPixels * 0.6, canvasWidth * 0.05);
+        
+        switch (state.qrPosition) {
+            case 'bottom-left':
+                qrX = sideMargin;
+                break;
+            case 'bottom-right':
+                qrX = canvasWidth - qrSize - sideMargin;
+                break;
+            case 'bottom-center':
+            default:
+                qrX = (canvasWidth - qrSize) / 2;
+                break;
+        }
+        
+        // Draw customizable border around QR
+        const qrBorderWidth = qrSize * state.qrBorderWidth;
         ctx.fillStyle = state.qrBorderColor;
         ctx.fillRect(qrX - qrBorderWidth, qrY - qrBorderWidth, 
                      qrSize + (qrBorderWidth * 2), qrSize + (qrBorderWidth * 2));
