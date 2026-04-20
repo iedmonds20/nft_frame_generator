@@ -1014,38 +1014,20 @@ async function downloadFrame() {
     
     addFrameDepth(ctx, printWidth, printHeight, matteOffset);
     
-    // Crop to exclude outer frame - only export the print area (mat board + image + QR)
-    // The outer frame goes from edge to borderPixels inward
-    const printCanvas = document.createElement('canvas');
-    const printCtx = printCanvas.getContext('2d');
-    
-    // Calculate print area size (everything except the outer decorative frame)
-    const printAreaWidth = printWidth - (borderPixels * 2);
-    const printAreaHeight = printHeight - (borderPixels * 2);
-    
-    printCanvas.width = printAreaWidth;
-    printCanvas.height = printAreaHeight;
-    
-    // Copy only the print area (crop from borderPixels inward, excluding the outer frame)
-    printCtx.drawImage(
-        canvas,
-        borderPixels, borderPixels, printAreaWidth, printAreaHeight,  // Source: skip outer frame border
-        0, 0, printAreaWidth, printAreaHeight                          // Destination: full new canvas
-    );
-    
-    // Download the cropped version (print only, no decorative frame)
+    // Export the full canvas at the exact selected size so it fits the chosen frame.
+    // (e.g. 24"x36" selection → 7200x10800px at 300 DPI, fits a 24"x36" frame perfectly)
     const filename = `nft-print-${state.contractAddress.slice(0, 8)}-${state.tokenId}-${state.selectedSize.width}x${state.selectedSize.height}.png`;
     
     if (isIOS) {
         // iOS Safari does not support <a download> or createObjectURL for saving files.
         // Open the image in a new tab so the user can long-press to save.
-        const dataUrl = printCanvas.toDataURL('image/png');
+        const dataUrl = canvas.toDataURL('image/png');
         const win = window.open('', '_blank');
         if (win) {
             win.document.write(`<!DOCTYPE html><html><head><title>Save Image</title></head><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;padding:10px"><p style="color:#fff;font-family:sans-serif;text-align:center">Long-press the image below and choose "Save to Photos" to download.</p><img src="${dataUrl}" style="max-width:100%;height:auto"></body></html>`);
         }
     } else {
-        printCanvas.toBlob((blob) => {
+        canvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
