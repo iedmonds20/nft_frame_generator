@@ -990,8 +990,8 @@ async function downloadFrame() {
     canvas.width = printWidth;
     canvas.height = printHeight;
     
-    // Load NFT image
-    const img = await loadImage(state.nftData.image);
+    // Load NFT image — must use CORS-safe loader so canvas stays exportable
+    const img = await loadImageCORSSafe(state.nftData.image);
     
     // Draw frame as flat solid color (no bevel/shadow — clean square edges for print services)
     const frameColor = state.frameMaterial === 'match-mat' ? state.matColor : getFrameColor(state.frameMaterial);
@@ -1109,6 +1109,51 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
     }
     
     document.body.removeChild(qrContainer);
+}
+
+// CORS-only image loader for canvas export — never falls back to no-CORS (which taints the canvas)
+function loadImageCORSSafe(src) {
+    return new Promise((resolve, reject) => {
+        let normalizedSrc = src;
+        if (src.startsWith('ipfs://')) {
+            normalizedSrc = src.replace('ipfs://', 'https://ipfs.io/ipfs/');
+        }
+
+        const tryLoad = (url) => new Promise((res, rej) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => res(img);
+            img.onerror = (e) => rej(e);
+            img.src = url;
+        });
+
+        const strategies = [
+            () => tryLoad(normalizedSrc),
+            () => normalizedSrc.includes('ipfs.io')
+                ? tryLoad(`https://cloudflare-ipfs.com/ipfs/${normalizedSrc.split('/ipfs/')[1]}`)
+                : Promise.reject(new Error('Not IPFS')),
+            () => normalizedSrc.includes('ipfs.io')
+                ? tryLoad(`https://gateway.pinata.cloud/ipfs/${normalizedSrc.split('/ipfs/')[1]}`)
+                : Promise.reject(new Error('Not IPFS')),
+            () => tryLoad(`https://corsproxy.io/?${encodeURIComponent(normalizedSrc)}`),
+            () => tryLoad(`https://api.allorigins.win/raw?url=${encodeURIComponent(normalizedSrc)}`),
+        ];
+
+        const tryNext = async (index) => {
+            if (index >= strategies.length) {
+                reject(new Error('Unable to load image with CORS access for download. The NFT host does not allow cross-origin requests.'));
+                return;
+            }
+            try {
+                resolve(await strategies[index]());
+            } catch (e) {
+                console.log(`CORS export strategy ${index + 1} failed, trying next...`);
+                tryNext(index + 1);
+            }
+        };
+
+        tryNext(0);
+    });
 }
 
 function loadImage(src) {
