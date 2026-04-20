@@ -914,11 +914,11 @@ async function drawQRCode(ctx, canvasWidth, canvasHeight, borderPixels) {
     const qrCanvasEl = qrContainer.querySelector('canvas');
     if (qrCanvasEl) {
         let qrX, qrY;
-        // Center the QR vertically in the bottom gap (image area leaves borderPixels*1.5 at the bottom).
-        // bottomGapCenter = canvasHeight - borderPixels * 0.75
-        const qrY_center = canvasHeight - borderPixels * 0.75 - qrSize / 2;
+        // Center the QR vertically in the bottom gap with a 5% buffer from the frame edge.
+        const frameBuffer = canvasHeight * 0.05;
+        const qrY_center = canvasHeight - frameBuffer - qrSize / 2;
         qrY = qrY_center;
-        const sideMargin = borderPixels * 0.6;
+        const sideMargin = Math.max(borderPixels * 0.6, canvasWidth * 0.05);
         
         switch (state.qrPosition) {
             case 'bottom-left':
@@ -1067,10 +1067,11 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
     const qrCanvasEl = qrContainer.querySelector('canvas');
     if (qrCanvasEl) {
         let qrX, qrY;
-        // Center the QR vertically in the bottom gap (same formula as preview)
-        const qrY_center = canvasHeight - borderPixels * 0.75 - qrSize / 2;
+        // Center the QR vertically in the bottom gap with a 5% buffer from the frame edge.
+        const frameBuffer = canvasHeight * 0.05;
+        const qrY_center = canvasHeight - frameBuffer - qrSize / 2;
         qrY = qrY_center;
-        const sideMargin = borderPixels * 0.6;
+        const sideMargin = Math.max(borderPixels * 0.6, canvasWidth * 0.05);
         
         switch (state.qrPosition) {
             case 'bottom-left':
