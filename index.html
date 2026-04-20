@@ -526,8 +526,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <!-- Coinbase / Base Wallet SDK (QR-based mobile pairing, no project ID required) -->
-    <script src="https://cdn.jsdelivr.net/npm/@coinbase/wallet-sdk@3.9.3/dist/CoinbaseWalletSDK.js"></script>
+    <!-- Coinbase / Base Wallet SDK — loaded as ESM to avoid CommonJS 'exports' error in browser -->
+    <script type="module">
+        import CoinbaseWalletSDK from 'https://esm.sh/@coinbase/wallet-sdk@3.9.3';
+        window.CoinbaseWalletSDK = CoinbaseWalletSDK;
+    </script>
     <!-- WalletConnect Ethereum Provider v2 (any WalletConnect-compatible mobile wallet) -->
     <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.13.4/dist/index.umd.js"></script>
     <script>
@@ -538,6 +541,6 @@
             }
         });
     </script>
-    <script src="app.js?v=16"></script>
+    <script src="app.js?v=18"></script>
 </body>
 </html>

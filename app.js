@@ -22,7 +22,12 @@ const state = {
 // NFT Metadata Standards
 const METADATA_STANDARDS = {
     ethereum: {
-        rpcUrl: 'https://eth.llamarpc.com',
+        rpcUrls: [
+            'https://eth.llamarpc.com',
+            'https://rpc.ankr.com/eth',
+            'https://cloudflare-eth.com',
+            'https://ethereum.publicnode.com'
+        ],
         chainId: 1,
         explorer: 'https://etherscan.io'
     }
@@ -539,7 +544,9 @@ async function fetchNFTMetadata(contractAddress, tokenId, network) {
         
         // Fallback: Try to read directly from contract using ethers.js
         console.log('Trying direct blockchain call...');
-        const provider = new ethers.providers.JsonRpcProvider(METADATA_STANDARDS[network].rpcUrl);
+        const provider = new ethers.providers.FallbackProvider(
+            METADATA_STANDARDS[network].rpcUrls.map(url => new ethers.providers.JsonRpcProvider(url)), 1
+        );
         
         // ERC-721 ABI for tokenURI
         const abi = [
@@ -1865,7 +1872,7 @@ async function connectWithCoinbaseWallet(btn, originalText) {
         appName: 'NFT Frame Studio',
         appLogoUrl: window.location.origin + '/favicon.ico'
     });
-    const ethereum = sdk.makeWeb3Provider('https://eth.llamarpc.com', 1);
+    const ethereum = sdk.makeWeb3Provider(METADATA_STANDARDS.ethereum.rpcUrls[0], 1);
     const accounts = await ethereum.enable();
     await doSignMessage(ethereum, accounts[0], btn, originalText);
 }
