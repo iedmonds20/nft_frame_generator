@@ -981,8 +981,8 @@ async function downloadFrame() {
     // Load NFT image
     const img = await loadImage(state.nftData.image);
     
-    // Draw frame (same logic as preview but at higher resolution)
-    ctx.fillStyle = getFrameColor(state.frameMaterial);
+    // Draw frame using mat color so the border blends into the background when printed
+    ctx.fillStyle = state.matColor;
     ctx.fillRect(0, 0, printWidth, printHeight);
     
     const matteOffset = borderPixels * 0.2;
@@ -1015,9 +1015,7 @@ async function downloadFrame() {
     // Draw QR code at high resolution
     await drawQRCodeHighRes(ctx, printWidth, printHeight, borderPixels);
     
-    addFrameDepth(ctx, printWidth, printHeight, matteOffset);
-    
-    // Crop outer decorative frame — export only the mat board area (image + QR with its border).
+    // Crop outer border — export only the mat board area (image + QR with its border).
     // The physical Staples/print-service frame goes around this printed piece.
     const printCanvas = document.createElement('canvas');
     const printCtx = printCanvas.getContext('2d');
