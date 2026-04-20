@@ -543,26 +543,31 @@ async function fetchNFTMetadata(contractAddress, tokenId, network) {
         }
         
         // Fallback: Try to read directly from contract using ethers.js
+        // Try each RPC URL in sequence until one succeeds
         console.log('Trying direct blockchain call...');
-        const provider = new ethers.providers.FallbackProvider(
-            METADATA_STANDARDS[network].rpcUrls.map(url => new ethers.providers.JsonRpcProvider(url)), 1
-        );
-        
-        // ERC-721 ABI for tokenURI
         const abi = [
             'function tokenURI(uint256 tokenId) view returns (string)',
             'function name() view returns (string)',
             'function symbol() view returns (string)'
         ];
-        
-        const contract = new ethers.Contract(contractAddress, abi, provider);
-        
+
         let tokenURI;
-        try {
-            tokenURI = await contract.tokenURI(tokenId);
-            console.log('Token URI:', tokenURI);
-        } catch (error) {
-            console.error('Contract call error:', error);
+        let lastRpcError;
+        for (const rpcUrl of METADATA_STANDARDS[network].rpcUrls) {
+            try {
+                console.log('Trying RPC:', rpcUrl);
+                const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+                const contract = new ethers.Contract(contractAddress, abi, provider);
+                tokenURI = await contract.tokenURI(tokenId);
+                console.log('Token URI:', tokenURI);
+                break; // success — stop trying
+            } catch (err) {
+                console.warn('RPC failed:', rpcUrl, err.message);
+                lastRpcError = err;
+            }
+        }
+        if (tokenURI === undefined) {
+            console.error('All RPC endpoints failed:', lastRpcError);
             throw new Error('Unable to fetch NFT metadata. The contract may not be ERC-721 compliant or the token ID may not exist.');
         }
         
