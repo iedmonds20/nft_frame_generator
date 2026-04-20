@@ -993,10 +993,9 @@ async function downloadFrame() {
     // Load NFT image
     const img = await loadImage(state.nftData.image);
     
-    // Draw frame using mat color so the border blends into the background when printed
-    ctx.fillStyle = state.matColor;
-    ctx.fillRect(0, 0, printWidth, printHeight);
-    
+    // Draw frame with selected material
+    drawEnhancedFrame(ctx, printWidth, printHeight, borderPixels, state.frameMaterial);
+
     const matteOffset = borderPixels * 0.2;
     ctx.fillStyle = state.matColor;
     ctx.fillRect(matteOffset, matteOffset, printWidth - (matteOffset * 2), printHeight - (matteOffset * 2));
@@ -1024,35 +1023,24 @@ async function downloadFrame() {
     
     ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
     
+    // Add frame depth effect
+    addFrameDepth(ctx, printWidth, printHeight, matteOffset);
+    
     // Draw QR code at high resolution
     await drawQRCodeHighRes(ctx, printWidth, printHeight, borderPixels);
-    
-    // Crop outer border — export only the mat board area (image + QR with its border).
-    // The physical Staples/print-service frame goes around this printed piece.
-    const printCanvas = document.createElement('canvas');
-    const printCtx = printCanvas.getContext('2d');
-    const printAreaWidth = printWidth - (borderPixels * 2);
-    const printAreaHeight = printHeight - (borderPixels * 2);
-    printCanvas.width = printAreaWidth;
-    printCanvas.height = printAreaHeight;
-    printCtx.drawImage(
-        canvas,
-        borderPixels, borderPixels, printAreaWidth, printAreaHeight,
-        0, 0, printAreaWidth, printAreaHeight
-    );
     
     const filename = `nft-print-${state.contractAddress.slice(0, 8)}-${state.tokenId}-${state.selectedSize.width}x${state.selectedSize.height}.png`;
     
     if (isIOS) {
         // iOS Safari does not support <a download> or createObjectURL for saving files.
         // Open the image in a new tab so the user can long-press to save.
-        const dataUrl = printCanvas.toDataURL('image/png');
+        const dataUrl = canvas.toDataURL('image/png');
         const win = window.open('', '_blank');
         if (win) {
             win.document.write(`<!DOCTYPE html><html><head><title>Save Image</title></head><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;padding:10px"><p style="color:#fff;font-family:sans-serif;text-align:center">Long-press the image below and choose "Save to Photos" to download.</p><img src="${dataUrl}" style="max-width:100%;height:auto"></body></html>`);
         }
     } else {
-        printCanvas.toBlob((blob) => {
+        canvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
