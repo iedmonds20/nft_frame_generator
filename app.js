@@ -1111,7 +1111,8 @@ async function drawQRCodeHighRes(ctx, canvasWidth, canvasHeight, borderPixels) {
     document.body.removeChild(qrContainer);
 }
 
-// CORS-only image loader for canvas export — never falls back to no-CORS (which taints the canvas)
+// CORS-only image loader for canvas export — never falls back to no-CORS (which taints the canvas).
+// Proxy strategies use fetch→blob URL so the resulting image is same-origin and never tainted.
 function loadImageCORSSafe(src) {
     return new Promise((resolve, reject) => {
         let normalizedSrc = src;
@@ -1119,7 +1120,8 @@ function loadImageCORSSafe(src) {
             normalizedSrc = src.replace('ipfs://', 'https://ipfs.io/ipfs/');
         }
 
-        const tryLoad = (url) => new Promise((res, rej) => {
+        // Load an image element from a URL with crossOrigin
+        const tryImgCORS = (url) => new Promise((res, rej) => {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => res(img);
@@ -1127,27 +1129,50 @@ function loadImageCORSSafe(src) {
             img.src = url;
         });
 
+        // Fetch URL via a proxy, convert to blob URL (same-origin → never taints canvas)
+        const tryFetchProxy = async (proxyUrl) => {
+            const resp = await fetch(proxyUrl);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const blob = await resp.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            // Load via img (crossOrigin not needed on blob: URLs — they're same-origin)
+            return new Promise((res, rej) => {
+                const img = new Image();
+                img.onload = () => res(img);
+                img.onerror = (e) => rej(e);
+                img.src = objectUrl;
+                // Note: objectUrl intentionally not revoked here — img must stay valid while drawn
+            });
+        };
+
         const strategies = [
-            () => tryLoad(normalizedSrc),
+            // 1. Direct CORS (works if server sends CORS headers)
+            () => tryImgCORS(normalizedSrc),
+            // 2. IPFS: Cloudflare gateway
             () => normalizedSrc.includes('ipfs.io')
-                ? tryLoad(`https://cloudflare-ipfs.com/ipfs/${normalizedSrc.split('/ipfs/')[1]}`)
+                ? tryImgCORS(`https://cloudflare-ipfs.com/ipfs/${normalizedSrc.split('/ipfs/')[1]}`)
                 : Promise.reject(new Error('Not IPFS')),
+            // 3. IPFS: Pinata gateway
             () => normalizedSrc.includes('ipfs.io')
-                ? tryLoad(`https://gateway.pinata.cloud/ipfs/${normalizedSrc.split('/ipfs/')[1]}`)
+                ? tryImgCORS(`https://gateway.pinata.cloud/ipfs/${normalizedSrc.split('/ipfs/')[1]}`)
                 : Promise.reject(new Error('Not IPFS')),
-            () => tryLoad(`https://corsproxy.io/?${encodeURIComponent(normalizedSrc)}`),
-            () => tryLoad(`https://api.allorigins.win/raw?url=${encodeURIComponent(normalizedSrc)}`),
+            // 4. wsrv.nl — image-specific proxy, reliable for NFT hosts
+            () => tryFetchProxy(`https://wsrv.nl/?url=${encodeURIComponent(normalizedSrc)}&output=png`),
+            // 5. allorigins (general proxy)
+            () => tryFetchProxy(`https://api.allorigins.win/raw?url=${encodeURIComponent(normalizedSrc)}`),
+            // 6. codetabs proxy
+            () => tryFetchProxy(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(normalizedSrc)}`),
         ];
 
         const tryNext = async (index) => {
             if (index >= strategies.length) {
-                reject(new Error('Unable to load image with CORS access for download. The NFT host does not allow cross-origin requests.'));
+                reject(new Error('Unable to load image for download — all proxy strategies failed. The NFT host blocks cross-origin requests.'));
                 return;
             }
             try {
                 resolve(await strategies[index]());
             } catch (e) {
-                console.log(`CORS export strategy ${index + 1} failed, trying next...`);
+                console.log(`CORS export strategy ${index + 1} failed (${e.message}), trying next...`);
                 tryNext(index + 1);
             }
         };
